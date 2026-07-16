@@ -276,3 +276,10 @@ export async function resolveGoogleMapsUrl(
 
   throw new MapsUrlResolutionError();
 }
+
+export function hasSameGoogleMapsPlaceIdentity(
+  normalizedFirst: string,
+  normalizedSecond: string,
+) {
+  return normalizedFirst === normalizedSecond;
+}

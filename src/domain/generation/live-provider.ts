@@ -2,7 +2,10 @@ import {
   normalizedRestaurantSchema,
   type NormalizedRestaurant,
 } from "@/domain/restaurant";
-import { resolveGoogleMapsUrl } from "./maps-url";
+import {
+  hasSameGoogleMapsPlaceIdentity,
+  resolveGoogleMapsUrl,
+} from "./maps-url";
 import { foldText } from "./text";
 import type { RestaurantProvider } from "./types";
 
@@ -291,7 +294,9 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     } catch {
       throw new UnusableRestaurantError();
     }
-    if (normalizedReturnedUrl !== normalizedSource)
+    if (
+      !hasSameGoogleMapsPlaceIdentity(normalizedReturnedUrl, normalizedSource)
+    )
       throw new UnusableRestaurantError();
     return normalizeRestaurant(
       item,

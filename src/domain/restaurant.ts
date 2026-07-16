@@ -14,6 +14,15 @@ const reviewsSchema = z.array(
   }),
 );
 
+const restaurantSourceSchema = z.enum([
+  "google-maps-preview",
+  "apify-google-maps",
+]);
+const diagnosticsSchema = z.object({
+  provider: z.string(),
+  warnings: z.array(z.string()),
+});
+
 export const normalizedRestaurantSchema = z.object({
   name: z.string().min(1),
   category: z.string().min(1),
@@ -29,11 +38,8 @@ export const normalizedRestaurantSchema = z.object({
   reviews: reviewsSchema,
   attribution: z.literal("Google Maps"),
   mapsUrl: z.url(),
-  source: z.enum(["google-maps-preview", "apify-google-maps"]),
-  diagnostics: z.object({
-    provider: z.string(),
-    warnings: z.array(z.string()),
-  }),
+  source: restaurantSourceSchema,
+  diagnostics: diagnosticsSchema,
   importedAt: z.iso.datetime(),
 });
 
@@ -46,12 +52,8 @@ export const storedRestaurantSchema = normalizedRestaurantSchema.extend({
   hours: hoursSchema.default([]),
   reviews: reviewsSchema.default([]),
   attribution: z.literal("Google Maps").default("Google Maps"),
-  source: z
-    .enum(["google-maps-preview", "apify-google-maps"])
-    .default("google-maps-preview"),
-  diagnostics: z
-    .object({ provider: z.string(), warnings: z.array(z.string()) })
-    .default({ provider: "legacy", warnings: [] }),
+  source: restaurantSourceSchema.default("google-maps-preview"),
+  diagnostics: diagnosticsSchema.default({ provider: "legacy", warnings: [] }),
 });
 
 export type StoredRestaurant = z.infer<typeof storedRestaurantSchema>;
