@@ -67,7 +67,10 @@ function getParameterIdentity(url: URL): PlaceIdentity | undefined {
 }
 
 function getPathIdentity(url: URL): PlaceIdentity | undefined {
-  const match = url.pathname.match(/!(19s|1s)([^!/?#]+)/);
+  const data = url.pathname.match(/\/data=([^/]*)\/?$/)?.[1];
+  if (!data) return undefined;
+
+  const match = data.match(/!(19s|1s)([^!/?#]+)/);
   if (!match) return undefined;
 
   let value: string;

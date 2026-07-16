@@ -82,6 +82,19 @@ describe("Google Maps URL resolution", () => {
     ]);
   });
 
+  it("does not treat identity-like text in a place label as identity data", async () => {
+    const first = await resolveGoogleMapsUrl(
+      "https://www.google.com/maps/place/A!19sChIJ123",
+    );
+    const second = await resolveGoogleMapsUrl(
+      "https://www.google.com/maps/place/B!19sChIJ123",
+    );
+
+    expect(first).toBe("https://www.google.com/maps/place/A!19sChIJ123");
+    expect(second).toBe("https://www.google.com/maps/place/B!19sChIJ123");
+    expect(first).not.toBe(second);
+  });
+
   it("supports the genuine root CID form and canonicalizes it", async () => {
     await expect(
       resolveGoogleMapsUrl("https://maps.google.com/?cid=12345678901234567890"),
