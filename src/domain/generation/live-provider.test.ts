@@ -207,6 +207,22 @@ describe("live restaurant providers", () => {
     await expect(provider.load(mapsUrl)).rejects.toThrow(
       "Restaurant data could not be verified.",
     );
+
+    const mismatched = new ApifyGoogleMapsProvider(
+      "private-token",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify([
+              { ...place, url: "https://www.google.com/maps/place/Other" },
+            ]),
+            { status: 200 },
+          ),
+      ) as typeof fetch,
+    );
+    await expect(mismatched.load(mapsUrl)).rejects.toThrow(
+      "Restaurant data could not be verified.",
+    );
   });
 
   it("creates category-neutral factual copy", () => {
@@ -258,6 +274,24 @@ describe("live restaurant providers", () => {
         { load: async () => sameNameDifferentVenue },
       ).load(mapsUrl),
     ).resolves.toEqual(baseline);
+    const conflictingAddress = normalizeRestaurant(
+      { ...place, address: "Calle Norte 99, Barranco", city: "Barranco" },
+      "apify-google-maps",
+      mapsUrl,
+    );
+    const conflictingCoordinates = normalizeRestaurant(
+      { ...place, location: { lat: -12.15, lng: -77.02 } },
+      "apify-google-maps",
+      mapsUrl,
+    );
+    for (const partialConflict of [conflictingAddress, conflictingCoordinates]) {
+      await expect(
+        new LiveRestaurantProvider(
+          { load: async () => baseline },
+          { load: async () => partialConflict },
+        ).load(mapsUrl),
+      ).resolves.toEqual(baseline);
+    }
     await expect(
       new LiveRestaurantProvider(
         {

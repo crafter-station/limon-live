@@ -36,7 +36,7 @@ export class UnusableRestaurantError extends Error {
   }
 }
 
-function text(value: unknown): string | null {
+function nonEmptyText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
@@ -77,7 +77,7 @@ function factualDescription(name: string, category: string, city: string) {
   return `${name}: ${category.toLocaleLowerCase("es")} en ${city}.`;
 }
 
-function agrees(left: string, right: string) {
+function sameNormalizedText(left: string, right: string) {
   return left.localeCompare(right, undefined, { sensitivity: "base" }) === 0;
 }
 
@@ -85,15 +85,15 @@ function isSameVenue(
   baseline: NormalizedRestaurant,
   enriched: NormalizedRestaurant,
 ) {
-  if (!agrees(baseline.name, enriched.name)) return false;
+  if (!sameNormalizedText(baseline.name, enriched.name)) return false;
 
   const addressAgrees =
-    agrees(baseline.address, enriched.address) &&
-    agrees(baseline.city, enriched.city);
+    sameNormalizedText(baseline.address, enriched.address) &&
+    sameNormalizedText(baseline.city, enriched.city);
   const coordinatesAgree =
     Math.abs(baseline.location.lat - enriched.location.lat) <= 0.001 &&
     Math.abs(baseline.location.lng - enriched.location.lng) <= 0.001;
-  return addressAgrees || coordinatesAgree;
+  return addressAgrees && coordinatesAgree;
 }
 
 export function normalizeRestaurant(
@@ -102,10 +102,10 @@ export function normalizeRestaurant(
   mapsUrl: string,
   importedAt = new Date().toISOString(),
 ): NormalizedRestaurant {
-  const name = text(value.title ?? value.name);
-  const category = text(value.categoryName ?? value.category);
-  const address = text(value.streetAddress ?? value.address);
-  const city = text(value.city ?? value.addressLocality);
+  const name = nonEmptyText(value.title ?? value.name);
+  const category = nonEmptyText(value.categoryName ?? value.category);
+  const address = nonEmptyText(value.streetAddress ?? value.address);
+  const city = nonEmptyText(value.city ?? value.addressLocality);
   const location = value.location as ProviderRecord | undefined;
   const lat = coordinate(location?.lat ?? value.latitude);
   const lng = coordinate(location?.lng ?? value.longitude);
@@ -127,7 +127,7 @@ export function normalizeRestaurant(
   }
 
   const description =
-    text(value.description) ?? factualDescription(name, category, city);
+    nonEmptyText(value.description) ?? factualDescription(name, category, city);
   const rawHours = Array.isArray(value.openingHours) ? value.openingHours : [];
   const rawReviews = Array.isArray(value.reviews)
     ? value.reviews.slice(0, 3)
@@ -138,13 +138,13 @@ export function normalizeRestaurant(
     description,
     address,
     city,
-    phone: text(value.phoneUnformatted ?? value.phone),
-    website: text(value.website),
+    phone: nonEmptyText(value.phoneUnformatted ?? value.phone),
+    website: nonEmptyText(value.website),
     location: { lat, lng },
     hours: rawHours.flatMap((entry) => {
       const item = entry as ProviderRecord;
-      const day = text(item.day);
-      const hours = text(item.hours);
+      const day = nonEmptyText(item.day);
+      const hours = nonEmptyText(item.hours);
       return day && hours ? [{ day, hours }] : [];
     }),
     rating: finiteNumber(value.totalScore) ?? finiteNumber(value.ratingValue),
@@ -152,11 +152,11 @@ export function normalizeRestaurant(
       finiteNumber(value.reviewsCount) ?? finiteNumber(value.reviewCount),
     reviews: rawReviews.flatMap((entry) => {
       const item = entry as ProviderRecord;
-      const reviewText = text(item.text ?? item.reviewBody);
+      const reviewText = nonEmptyText(item.text ?? item.reviewBody);
       return reviewText
         ? [
             {
-              author: text(item.name ?? item.author),
+              author: nonEmptyText(item.name ?? item.author),
               text: reviewText,
               rating: typeof item.stars === "number" ? item.stars : null,
             },
@@ -187,7 +187,7 @@ export function parseGoogleMapsPreview(html: string): ProviderRecord {
       const data = JSON.parse(match[1]) as ProviderRecord;
       const geo = data.geo as ProviderRecord | undefined;
       const address = data.address as ProviderRecord | undefined;
-      if (text(data.name) && geo && address) {
+      if (nonEmptyText(data.name) && geo && address) {
         return {
           ...data,
           category:
@@ -272,8 +272,11 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     }
     if (!Array.isArray(items) || items.length !== 1)
       throw new UnusableRestaurantError();
+    const item = items[0] as ProviderRecord;
+    if (nonEmptyText(item.url) !== normalizedSource)
+      throw new UnusableRestaurantError();
     return normalizeRestaurant(
-      items[0] as ProviderRecord,
+      item,
       "apify-google-maps",
       normalizedSource,
     );
