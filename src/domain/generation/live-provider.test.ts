@@ -80,7 +80,7 @@ describe("live restaurant providers", () => {
       string,
       RequestInit & { headers: Record<string, string>; body: string },
     ];
-    expect(url).toContain("maxItems=1&maxTotalChargeUsd=0.02");
+    expect(url).toContain("maxItems=1&maxTotalChargeUsd=0.5");
     expect(url).not.toContain("private-token");
     expect(init.headers.authorization).toBe("Bearer private-token");
     expect(JSON.parse(init.body)).toEqual(APIFY_INPUT(mapsUrl));
@@ -92,6 +92,7 @@ describe("live restaurant providers", () => {
       scrapeContacts: false,
       scrapeDirectories: false,
       enableCompetitorAnalysis: false,
+      scrapeReviewsPersonalData: false,
     });
   });
 
@@ -105,6 +106,17 @@ describe("live restaurant providers", () => {
             throw new Error("paid detail");
           },
         },
+      ).load(mapsUrl),
+    ).resolves.toEqual(baseline);
+    const conflict = normalizeRestaurant(
+      { ...place, title: "Otro Restaurante" },
+      "apify-google-maps",
+      mapsUrl,
+    );
+    await expect(
+      new LiveRestaurantProvider(
+        { load: async () => baseline },
+        { load: async () => conflict },
       ).load(mapsUrl),
     ).resolves.toEqual(baseline);
     await expect(

@@ -5,7 +5,7 @@ import {
 import type { RestaurantProvider } from "./types";
 
 const FOOD_CATEGORIES =
-  /restaurant|restaurante|café|cafe|coffee|bakery|panader|pasteler|pizzer|bar|bistro|food|comida|helader|ice cream/i;
+  /(?:^|\s)(?:restaurant|restaurante|café|cafe|coffee shop|bakery|panader[ií]a|pasteler[ií]a|pizzer[ií]a|bistro|food court|helader[ií]a|ice cream shop|bar)(?:$|\s)/i;
 
 type ProviderRecord = Record<string, unknown>;
 
@@ -31,12 +31,11 @@ export function normalizeRestaurant(
 ): NormalizedRestaurant {
   const name = text(value.title ?? value.name);
   const category = text(value.categoryName ?? value.category);
-  const address = text(value.address ?? value.streetAddress);
+  const address = text(value.streetAddress ?? value.address);
   const city = text(value.city ?? value.addressLocality);
   const location = value.location as ProviderRecord | undefined;
   const lat = Number(location?.lat ?? value.latitude);
   const lng = Number(location?.lng ?? value.longitude);
-  const canonicalUrl = text(value.url ?? value.mapsUrl) ?? mapsUrl;
 
   if (
     !name ||
@@ -97,7 +96,7 @@ export function normalizeRestaurant(
         : [];
     }),
     attribution: "Google Maps",
-    mapsUrl: canonicalUrl,
+    mapsUrl,
     source,
     diagnostics: {
       provider: source,
@@ -123,7 +122,7 @@ export function parseGoogleMapsPreview(html: string): ProviderRecord {
       if (text(data.name) && geo && address) {
         return {
           ...data,
-          category: data.servesCuisine ?? data["@type"],
+          category: data["@type"],
           streetAddress: address.streetAddress,
           addressLocality: address.addressLocality,
           latitude: geo.latitude,
@@ -172,6 +171,7 @@ export const APIFY_INPUT = (url: string) => ({
   scrapePlaceDetailPage: true,
   enableCompetitorAnalysis: false,
   maxCompetitorsToAnalyze: 0,
+  scrapeReviewsPersonalData: false,
 });
 
 export class ApifyGoogleMapsProvider implements RestaurantProvider {
@@ -180,10 +180,10 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     private readonly fetcher: typeof fetch = fetch,
   ) {}
   async load(normalizedSource: string) {
-    const endpoint = `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?timeout=60&maxItems=1&maxTotalChargeUsd=0.02`;
+    const endpoint = `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?timeout=40&maxItems=1&maxTotalChargeUsd=0.5`;
     const response = await this.fetcher(endpoint, {
       method: "POST",
-      signal: AbortSignal.timeout(70_000),
+      signal: AbortSignal.timeout(45_000),
       headers: {
         authorization: `Bearer ${this.token}`,
         "content-type": "application/json",
@@ -214,7 +214,15 @@ export class LiveRestaurantProvider implements RestaurantProvider {
     } catch {}
     if (this.enrichment) {
       try {
-        return await this.enrichment.load(normalizedSource);
+        const enriched = await this.enrichment.load(normalizedSource);
+        if (
+          !baseline ||
+          enriched.name.localeCompare(baseline.name, undefined, {
+            sensitivity: "base",
+          }) === 0
+        ) {
+          return enriched;
+        }
       } catch {}
     }
     if (baseline) return baseline;
