@@ -71,4 +71,29 @@ describe("published restaurant page", () => {
     expect(html).not.toContain("reseñas");
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
+
+  it("keeps legacy immutable publications readable", async () => {
+    findReadyBySlug.mockResolvedValue({
+      publishedData: {
+        name: "Café Antiguo",
+        category: "Café",
+        description: "Café Antiguo: café en Lima.",
+        address: "Calle Lima 1",
+        city: "Lima",
+        phone: null,
+        rating: null,
+        reviewCount: null,
+        mapsUrl: FIXTURE_NORMALIZED_SOURCE,
+        importedAt: "2026-07-01T00:00:00.000Z",
+      },
+    });
+
+    const page = await PublishedRestaurantPage({
+      params: Promise.resolve({ slug: "cafe-antiguo" }),
+    });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("Café Antiguo");
+    expect(html).toContain("Fuente: Google Maps");
+  });
 });

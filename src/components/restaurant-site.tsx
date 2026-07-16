@@ -1,10 +1,10 @@
 import Link from "next/link";
-import type { NormalizedRestaurant } from "@/domain/restaurant";
+import type { StoredRestaurant } from "@/domain/restaurant";
 
 export function RestaurantSite({
   restaurant,
 }: {
-  restaurant: NormalizedRestaurant;
+  restaurant: StoredRestaurant;
 }) {
   const importedDate = new Intl.DateTimeFormat("es-PE", {
     dateStyle: "long",
