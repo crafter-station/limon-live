@@ -12,8 +12,13 @@ describe("submission security", () => {
       "203.0.113.8",
       "postgres://credential",
     );
+    const afterCredentialRotation = deriveRequesterKey(
+      "203.0.113.8",
+      "postgres://rotated-credential",
+    );
 
     expect(first).toBe(duplicate);
+    expect(afterCredentialRotation).not.toBe(first);
     expect(first).toHaveLength(64);
     expect(first).not.toContain("203.0.113.8");
   });
