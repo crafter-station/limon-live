@@ -29,7 +29,12 @@ export function GenerationProgress({
 
   useEffect(() => {
     void retryKey;
-    if (generation.status === "ready" || generation.status === "failed") return;
+    if (
+      delayed ||
+      generation.status === "ready" ||
+      generation.status === "failed"
+    )
+      return;
 
     let active = true;
     let pollTimer: ReturnType<typeof setTimeout>;
@@ -64,7 +69,7 @@ export function GenerationProgress({
       clearTimeout(delayedTimer);
       clearTimeout(pollTimer);
     };
-  }, [id, retryKey, generation.status, applyStatus]);
+  }, [id, retryKey, delayed, generation.status, applyStatus]);
 
   const retry = () => {
     setDelayed(false);
