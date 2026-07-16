@@ -21,7 +21,7 @@ body {
   margin: 0;
   background: var(--cream);
   color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -43,6 +43,14 @@ input {
     var(--cream);
 }
 
+.landing-shell {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 88% 8%, rgb(201 242 123 / 70%), transparent 22%),
+    radial-gradient(circle at 5% 54%, rgb(255 115 92 / 18%), transparent 22%),
+    var(--cream);
+}
+
 .landing-nav,
 .restaurant-nav {
   display: flex;
@@ -61,6 +69,9 @@ input {
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 2rem;
   font-weight: 800;
@@ -68,12 +79,27 @@ input {
   text-decoration: none;
 }
 
+.brand-mark {
+  display: inline-grid;
+  width: 38px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50% 50% 46% 54%;
+  background: var(--coral);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  transform: rotate(-8deg);
+}
+
 .landing-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
   gap: clamp(40px, 8vw, 120px);
   align-items: center;
-  min-height: calc(100vh - 100px);
+  min-height: min(860px, calc(100vh - 70px));
   max-width: 1280px;
   margin: 0 auto;
 }
@@ -99,7 +125,7 @@ input {
 
 .landing-copy h1 {
   max-width: 760px;
-  font-size: clamp(3.6rem, 8vw, 7.5rem);
+  font-size: clamp(3.4rem, 7vw, 6.8rem);
 }
 
 .lede {
@@ -120,6 +146,15 @@ input {
   font-size: 0.88rem;
 }
 
+.source-form {
+  max-width: 750px;
+  padding: 20px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: rgb(255 253 245 / 72%);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
 .form-row {
   display: flex;
   gap: 10px;
@@ -133,6 +168,10 @@ input {
   border-radius: 10px;
   background: var(--paper);
   color: var(--ink);
+}
+
+.form-row input::placeholder {
+  color: rgb(24 58 45 / 55%);
 }
 
 .primary-button {
@@ -154,6 +193,21 @@ input {
 .primary-button:active {
   box-shadow: 1px 1px 0 var(--ink);
   transform: translate(3px, 3px);
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.example-button {
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid currentcolor;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
 }
 
 :focus-visible {
@@ -179,6 +233,13 @@ input {
   transform: rotate(2deg);
 }
 
+.preview-topline {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  font-size: 1.5rem;
+}
+
 .preview-label {
   display: inline-block;
   margin-bottom: 18px;
@@ -192,7 +253,9 @@ input {
 }
 
 .preview-art {
+  display: grid;
   height: 230px;
+  place-items: center;
   border: 2px solid var(--ink);
   border-radius: 150px 150px 20px 20px;
   background:
@@ -200,10 +263,88 @@ input {
     conic-gradient(from 45deg, var(--lime), #ffe79c, var(--coral), var(--lime));
 }
 
+.preview-art span {
+  display: grid;
+  width: 82px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 5px 5px 0 var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.preview-kicker {
+  margin: 20px 0 0;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .preview-card h2 {
-  margin: 22px 0 6px;
+  margin: 4px 0 6px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 2.3rem;
+}
+
+.steps-section {
+  max-width: 1280px;
+  margin: 70px auto 20px;
+  padding: clamp(40px, 7vw, 90px);
+  border: 3px solid var(--ink);
+  border-radius: 32px;
+  background: var(--ink);
+  box-shadow: 12px 12px 0 var(--coral);
+  color: var(--paper);
+}
+
+.steps-section > h2 {
+  max-width: 800px;
+  margin: 0 0 55px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.7rem, 6vw, 5.7rem);
+  letter-spacing: -0.05em;
+  line-height: 0.98;
+}
+
+.steps-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps-list li {
+  min-height: 220px;
+  padding: 28px;
+  border: 2px solid var(--paper);
+}
+
+.steps-list li + li {
+  border-left: 0;
+}
+
+.steps-list span {
+  color: var(--lime);
+  font-weight: 900;
+}
+
+.steps-list h3 {
+  margin: 50px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+}
+
+.steps-list p {
+  margin: 0;
+  color: rgb(255 253 245 / 78%);
+  line-height: 1.55;
 }
 
 .preview-rule {
@@ -357,7 +498,11 @@ input {
   }
 
   .landing-grid {
-    padding: 80px 0 30px;
+    padding: 90px 0 50px;
+  }
+
+  .landing-nav > span {
+    display: none;
   }
 
   .form-row,
@@ -368,6 +513,15 @@ input {
 
   .preview-card {
     transform: none;
+  }
+
+  .steps-list {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-list li + li {
+    border-top: 0;
+    border-left: 2px solid var(--paper);
   }
 
   .restaurant-hero {

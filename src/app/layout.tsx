@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Limon | A restaurant page from Maps",
-  description: "Turn a supported Maps fixture into a stored restaurant page.",
+  title: "Limon | Turn a Google Maps place into a restaurant page",
+  description:
+    "Create a polished, shareable restaurant page from a Google Maps place link.",
 };
 
 export default function RootLayout({

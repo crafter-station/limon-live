@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { normalizedRestaurantSchema } from "@/domain/restaurant";
-import { normalizeFixtureSource } from "./fixture-provider";
+import { resolveGoogleMapsUrl } from "./maps-url";
 import {
   GENERATION_FAILURE_MESSAGE,
   type GenerationRepository,
@@ -29,7 +29,7 @@ export class GenerationCoordinator {
   ) {}
 
   async submit(sourceUrl: string): Promise<SubmissionResult> {
-    const normalizedSource = normalizeFixtureSource(sourceUrl);
+    const normalizedSource = await resolveGoogleMapsUrl(sourceUrl);
     const generation = await this.repository.createOrGet(
       sourceUrl,
       normalizedSource,

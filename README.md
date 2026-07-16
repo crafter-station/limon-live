@@ -1,9 +1,10 @@
 # Limon
 
-Limon turns a supported Google Maps fixture into a persisted Spanish restaurant
-page. This first tracer bullet deliberately uses a local fixture provider: it
-establishes the production database, provider, coordinator, and rendering seams
-without making Google, Apify, Vercel Blob, or AI calls.
+Limon turns a supported full or shortened Google Maps place link into a
+persisted Spanish restaurant page. The current enrichment step deliberately
+uses a local Las Palmeras fixture provider: submission and duplicate handling
+are production-shaped without adding paid Google, Apify, Vercel Blob, or AI
+calls yet.
 
 ## Setup
 
@@ -11,8 +12,8 @@ without making Google, Apify, Vercel Blob, or AI calls.
 2. Copy the four names from `.env.example` into `.env.local` and provide values.
 3. Apply the checked-in migration with `bun run db:migrate`.
 4. Start Next.js with `bun run dev`.
-5. Submit the prefilled Las Palmeras URL, advance its generation, and open the
-   resulting `/r/las-palmeras` page.
+5. Click the Las Palmeras example, submit its URL, advance the generation, and
+   open the resulting `/r/las-palmeras` page.
 
 The exact server-only environment contract is:
 
@@ -43,8 +44,9 @@ leak the contract. No variable is prefixed with `NEXT_PUBLIC_`.
 
 ## Data Flow
 
-The landing Server Action normalizes the supported fixture URL and atomically
-creates or reuses a `restaurant_generations` row. The generation coordinator
+The landing Server Action validates and normalizes supported Google Maps place
+URLs, manually follows bounded short-link redirects, and atomically creates or
+reuses a `restaurant_generations` row. The generation coordinator
 claims that row with a fenced lease, asks the injected fixture provider for a
 normalized restaurant, checkpoints that data, then publishes the same data and
 a stable slug. The restaurant route reads only the ready row's stored JSON; it
@@ -55,14 +57,22 @@ generation URL may advance that record, while malformed identifiers are rejected
 before they reach Postgres. This is intentional for the account-free tracer
 bullet and must be revisited if generation URLs become discoverable.
 
+Anonymous submissions are limited per UTC hour with one atomic Postgres upsert.
+The requester address is converted to an HMAC key before persistence and is
+never stored or returned. The HMAC key is derived with domain separation from
+`DATABASE_URL`, so credential rotation also resets effective rate-limit buckets.
+The deployed limiter trusts only Vercel's overwritten
+`x-vercel-forwarded-for` header; other forwarding headers are ignored.
+
 Automated tests exercise the coordinator through persisted state transitions
 and rendered Spanish output. Test setup replaces global `fetch` with a function
 that throws, so adding an accidental paid network call fails the suite.
 
 ## Fixture Limitations
 
-- Only the documented Las Palmeras URL is accepted; general Maps URL resolution
-  and live providers are later work.
+- General supported Maps place URLs can create generation records, but only the
+  documented Las Palmeras place has fixture enrichment until live providers are
+  added.
 - Published pages are immutable and excluded from indexing.
 - Public source information may be incomplete or outdated and is not verified
   by the restaurant.
