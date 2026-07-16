@@ -194,7 +194,9 @@ describe("live restaurant providers", () => {
         "private-token",
         vi.fn(async () => new Response(body, { status: 200 })) as typeof fetch,
       );
-      await expect(provider.load(mapsUrl)).rejects.toThrow();
+      await expect(provider.load(mapsUrl)).rejects.toThrow(
+        "Restaurant data could not be verified.",
+      );
     }
     const provider = new ApifyGoogleMapsProvider(
       "private-token",

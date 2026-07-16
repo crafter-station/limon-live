@@ -264,7 +264,12 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
       body: JSON.stringify(APIFY_INPUT(normalizedSource)),
     });
     if (!response.ok) throw new UnusableRestaurantError();
-    const items = await response.json();
+    let items: unknown;
+    try {
+      items = await response.json();
+    } catch {
+      throw new UnusableRestaurantError();
+    }
     if (!Array.isArray(items) || items.length !== 1)
       throw new UnusableRestaurantError();
     return normalizeRestaurant(
