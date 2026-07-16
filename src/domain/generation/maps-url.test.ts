@@ -22,9 +22,7 @@ describe("Google Maps URL resolution", () => {
 
     expect(first).toBe(placeUrl);
     expect(regional).toBe(placeUrl);
-    expect(parameterized).toBe(
-      "https://www.google.com/maps?query_place_id=ChIJ123",
-    );
+    expect(parameterized).toBe("https://www.google.com/maps?place_id=ChIJ123");
   });
 
   it("deduplicates links by stable place identity instead of display details", async () => {
@@ -35,8 +33,22 @@ describe("Google Maps URL resolution", () => {
       "https://www.google.com.pe/maps/place/New+Name?ved=incidental&query_place_id=ChIJ123",
     );
 
-    expect(first).toBe("https://www.google.com/maps?query_place_id=ChIJ123");
+    expect(first).toBe("https://www.google.com/maps?place_id=ChIJ123");
     expect(renamed).toBe(first);
+  });
+
+  it("canonicalizes equivalent place-ID parameter forms", async () => {
+    const links = [
+      "https://www.google.com/maps?query_place_id=ChIJ123",
+      "https://www.google.com/maps?place_id=ChIJ123",
+      "https://www.google.com/maps?q=place_id:ChIJ123",
+    ];
+
+    await expect(
+      Promise.all(links.map((link) => resolveGoogleMapsUrl(link))),
+    ).resolves.toEqual(
+      links.map(() => "https://www.google.com/maps?place_id=ChIJ123"),
+    );
   });
 
   it.each([
@@ -46,6 +58,9 @@ describe("Google Maps URL resolution", () => {
     "https://user:pass@www.google.com/maps/place/Cafe",
     "https://www.google.com/search?q=Cafe",
     "https://www.google.com/maps/@-12.1,-77.1,14z",
+    "https://www.google.com/maps?cid=",
+    "https://www.google.com/maps?q=place_id:",
+    "https://www.google.com/maps?query_place_id=%20",
     "not a url",
   ])("rejects unsafe or unsupported input: %s", async (input) => {
     await expect(resolveGoogleMapsUrl(input)).rejects.toBeInstanceOf(

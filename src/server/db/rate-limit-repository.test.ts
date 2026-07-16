@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { deriveRequesterKey } from "@/server/submission-security";
 import { DrizzleRateLimitRepository } from "./rate-limit-repository";
 import * as schema from "./schema";
 
@@ -24,9 +25,13 @@ describe("Drizzle rate-limit repository", () => {
   it("atomically permits only the configured number of concurrent increments", async () => {
     const repository = new DrizzleRateLimitRepository(database);
     const bucket = new Date("2026-07-16T10:00:00.000Z");
+    const requesterKey = deriveRequesterKey(
+      "203.0.113.8",
+      "postgres://test-credential",
+    );
     const results = await Promise.all(
       Array.from({ length: 12 }, () =>
-        repository.consume("a".repeat(64), bucket, 5, bucket),
+        repository.consume(requesterKey, bucket, 5, bucket),
       ),
     );
 
@@ -35,7 +40,7 @@ describe("Drizzle rate-limit repository", () => {
       database.select().from(schema.submissionRateLimits),
     ).resolves.toEqual([
       expect.objectContaining({
-        requesterKey: "a".repeat(64),
+        requesterKey,
         requestCount: 5,
       }),
     ]);
@@ -45,18 +50,26 @@ describe("Drizzle rate-limit repository", () => {
     const repository = new DrizzleRateLimitRepository(database);
     const firstHour = new Date("2026-07-16T10:00:00.000Z");
     const nextHour = new Date("2026-07-16T11:00:00.000Z");
+    const firstRequester = deriveRequesterKey(
+      "203.0.113.8",
+      "postgres://test-credential",
+    );
+    const secondRequester = deriveRequesterKey(
+      "198.51.100.4",
+      "postgres://test-credential",
+    );
 
     await expect(
-      repository.consume("a".repeat(64), firstHour, 1, firstHour),
+      repository.consume(firstRequester, firstHour, 1, firstHour),
     ).resolves.toBe(true);
     await expect(
-      repository.consume("a".repeat(64), firstHour, 1, firstHour),
+      repository.consume(firstRequester, firstHour, 1, firstHour),
     ).resolves.toBe(false);
     await expect(
-      repository.consume("a".repeat(64), nextHour, 1, nextHour),
+      repository.consume(firstRequester, nextHour, 1, nextHour),
     ).resolves.toBe(true);
     await expect(
-      repository.consume("b".repeat(64), firstHour, 1, firstHour),
+      repository.consume(secondRequester, firstHour, 1, firstHour),
     ).resolves.toBe(true);
   });
 });

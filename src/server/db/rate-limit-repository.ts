@@ -2,6 +2,7 @@ import "server-only";
 import { lt, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core/session";
+import type { RequesterKey } from "@/server/submission-security";
 import { getDatabase } from "./client";
 import * as schema from "./schema";
 
@@ -13,7 +14,7 @@ export class DrizzleRateLimitRepository {
   constructor(private readonly database: RateLimitDatabase = getDatabase()) {}
 
   async consume(
-    requesterKey: string,
+    requesterKey: RequesterKey,
     windowStart: Date,
     limit: number,
     now: Date,

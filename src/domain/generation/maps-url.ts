@@ -19,6 +19,27 @@ export class MapsUrlResolutionError extends Error {}
 
 type UrlKind = "full" | "short";
 
+function getParameterIdentity(url: URL): readonly [string, string] | undefined {
+  const qPlaceId = url.searchParams.get("q")?.match(/^place_id:(.+)$/)?.[1];
+  const placeId = [
+    url.searchParams.get("query_place_id"),
+    url.searchParams.get("place_id"),
+    qPlaceId,
+  ].find(
+    (value) =>
+      typeof value === "string" && value.length > 0 && value.trim() === value,
+  );
+  const candidates = [
+    ["place_id", placeId],
+    ["ftid", url.searchParams.get("ftid")],
+    ["cid", url.searchParams.get("cid")],
+  ] as const;
+
+  for (const [name, value] of candidates) {
+    if (value && value.trim() === value) return [name, value];
+  }
+}
+
 function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
   if (input.length > MAX_URL_LENGTH) throw new UnsupportedMapsUrlError();
 
@@ -51,12 +72,7 @@ function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
   if (!fullHosts.has(hostname)) throw new UnsupportedMapsUrlError();
 
   const hasPlacePath = /^\/maps\/place\/[^/]+/.test(url.pathname);
-  const hasPlaceParameter =
-    url.searchParams.has("cid") ||
-    url.searchParams.has("ftid") ||
-    url.searchParams.has("place_id") ||
-    url.searchParams.has("query_place_id") ||
-    url.searchParams.get("q")?.startsWith("place_id:") === true;
+  const hasPlaceParameter = getParameterIdentity(url) !== undefined;
   const hasSupportedParameterizedPath =
     /^\/maps\/?$/.test(url.pathname) ||
     /^\/maps\/search\/?$/.test(url.pathname);
@@ -69,19 +85,16 @@ function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
 }
 
 function normalizeFullUrl(url: URL): string {
-  const parameterIdentity = ["query_place_id", "place_id", "ftid", "cid"]
-    .map((name) => [name, url.searchParams.get(name)] as const)
-    .find((entry) => entry[1]);
-  const qPlaceId = url.searchParams.get("q")?.match(/^place_id:(.+)$/)?.[1];
+  const parameterIdentity = getParameterIdentity(url);
   const pathIdentity = url.pathname.match(/!1s([^!]+)/)?.[1];
+  const identity =
+    parameterIdentity ??
+    (pathIdentity ? (["place_id", pathIdentity] as const) : undefined);
 
-  if (parameterIdentity || qPlaceId || pathIdentity) {
-    const [name, value] = parameterIdentity ?? [
-      "place_id",
-      qPlaceId ?? pathIdentity,
-    ];
+  if (identity) {
+    const [name, value] = identity;
     const identityUrl = new URL("https://www.google.com/maps");
-    identityUrl.searchParams.set(name, value ?? "");
+    identityUrl.searchParams.set(name, value);
     return identityUrl.toString();
   }
 
