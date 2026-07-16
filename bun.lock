@@ -6,6 +6,7 @@
       "name": "limon-live",
       "dependencies": {
         "@neondatabase/serverless": "^1.1.0",
+        "@next/env": "16.2.10",
         "drizzle-orm": "^0.45.2",
         "next": "16.2.10",
         "react": "19.2.4",

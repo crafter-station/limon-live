@@ -1,5 +1,7 @@
 import type { NormalizedRestaurant } from "@/domain/restaurant";
 
+export const MAX_GENERATION_ATTEMPTS = 3;
+
 export type GenerationStatus = "pending" | "generating" | "ready" | "failed";
 
 export type Generation = {

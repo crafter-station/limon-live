@@ -11,7 +11,7 @@ export function RestaurantSite({
   }).format(new Date(restaurant.importedAt));
 
   return (
-    <main className="restaurant-page">
+    <main className="restaurant-page" lang="es">
       <nav className="restaurant-nav" aria-label="Navegación principal">
         <a className="wordmark" href="/">
           Limon

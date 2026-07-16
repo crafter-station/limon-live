@@ -11,6 +11,11 @@ import type { Generation, GenerationRepository } from "./types";
 
 class MemoryGenerationRepository implements GenerationRepository {
   private readonly records = new Map<string, Generation>();
+  private interruptPublication = false;
+
+  interruptNextPublication() {
+    this.interruptPublication = true;
+  }
 
   async createOrGet(sourceUrl: string, normalizedSource: string) {
     const existing = [...this.records.values()].find(
@@ -95,6 +100,11 @@ class MemoryGenerationRepository implements GenerationRepository {
   ) {
     const record = this.records.get(id);
     if (record?.leaseToken !== leaseToken) return null;
+    if (this.interruptPublication) {
+      this.interruptPublication = false;
+      record.leaseToken = crypto.randomUUID();
+      return null;
+    }
     Object.assign(record, {
       status: "ready" as const,
       publishedData: structuredClone(data),
@@ -187,6 +197,33 @@ describe("fixture generation golden path", () => {
     expect(duplicate).toEqual({ kind: "ready", slug: "las-palmeras" });
     expect(load).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("resumes from a durable checkpoint without repeating provider work", async () => {
+    const repository = new MemoryGenerationRepository();
+    const provider = new FixtureRestaurantProvider();
+    const load = vi.spyOn(provider, "load");
+    let now = new Date("2026-07-16T10:00:00.000Z");
+    const coordinator = new GenerationCoordinator(
+      repository,
+      provider,
+      () => now,
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+    repository.interruptNextPublication();
+
+    expect(await coordinator.advance(submission.id)).toEqual({
+      kind: "generating",
+      id: submission.id,
+    });
+    now = new Date("2026-07-16T10:02:00.000Z");
+    expect(await coordinator.advance(submission.id)).toEqual({
+      kind: "ready",
+      slug: "las-palmeras",
+    });
+    expect(load).toHaveBeenCalledOnce();
   });
 
   it("persists only a safe error when a provider fails", async () => {

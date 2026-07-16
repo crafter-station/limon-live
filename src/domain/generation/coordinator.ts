@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { normalizedRestaurantSchema } from "@/domain/restaurant";
 import { normalizeFixtureSource } from "./fixture-provider";
-import type { GenerationRepository, RestaurantProvider } from "./types";
+import {
+  type GenerationRepository,
+  MAX_GENERATION_ATTEMPTS,
+  type RestaurantProvider,
+} from "./types";
 
 const LEASE_DURATION_MS = 60_000;
 const PUBLIC_FAILURE_MESSAGE =
@@ -13,7 +17,10 @@ export type SubmissionResult =
 
 export type AdvanceResult =
   | { kind: "generating"; id: string }
+  | { kind: "failed"; id: string }
   | { kind: "ready"; slug: string };
+
+export class GenerationFailedError extends Error {}
 
 export class GenerationCoordinator {
   constructor(
@@ -57,6 +64,12 @@ export class GenerationCoordinator {
       if (latest?.status === "ready" && latest.slug) {
         return { kind: "ready", slug: latest.slug };
       }
+      if (
+        latest?.status === "failed" &&
+        latest.attemptCount >= MAX_GENERATION_ATTEMPTS
+      ) {
+        return { kind: "failed", id };
+      }
       return { kind: "generating", id };
     }
 
@@ -94,7 +107,7 @@ export class GenerationCoordinator {
         PUBLIC_FAILURE_MESSAGE,
         this.now(),
       );
-      throw new Error(PUBLIC_FAILURE_MESSAGE);
+      throw new GenerationFailedError(PUBLIC_FAILURE_MESSAGE);
     }
   }
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 import { advanceGeneration } from "@/app/actions";
+import { MAX_GENERATION_ATTEMPTS } from "@/domain/generation/types";
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 
 export const metadata: Metadata = {
@@ -14,6 +16,7 @@ export default async function GenerationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!z.uuid().safeParse(id).success) notFound();
   const generation = await new DrizzleGenerationRepository().findById(id);
 
   if (!generation) notFound();
@@ -38,12 +41,16 @@ export default async function GenerationPage({
             {generation.safeError}
           </p>
         ) : null}
-        <form action={advanceGeneration}>
-          <input name="id" type="hidden" value={id} />
-          <button className="primary-button" type="submit">
-            Build the fixture site
-          </button>
-        </form>
+        {generation.attemptCount < MAX_GENERATION_ATTEMPTS ? (
+          <form action={advanceGeneration}>
+            <input name="id" type="hidden" value={id} />
+            <button className="primary-button" type="submit">
+              Build the fixture site
+            </button>
+          </form>
+        ) : (
+          <a href="/">Try another link</a>
+        )}
       </section>
     </main>
   );

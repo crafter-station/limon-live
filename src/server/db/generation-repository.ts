@@ -1,14 +1,13 @@
 import "server-only";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import type { NormalizedRestaurant } from "@/domain/restaurant";
-import type {
-  Generation,
-  GenerationRepository,
+import {
+  type Generation,
+  type GenerationRepository,
+  MAX_GENERATION_ATTEMPTS,
 } from "@/domain/generation/types";
 import { getDatabase } from "./client";
 import { restaurantGenerations } from "./schema";
-
-const MAX_ATTEMPTS = 3;
 
 export class DrizzleGenerationRepository implements GenerationRepository {
   private readonly database = getDatabase();
@@ -77,7 +76,7 @@ export class DrizzleGenerationRepository implements GenerationRepository {
       .where(
         and(
           eq(restaurantGenerations.id, id),
-          lt(restaurantGenerations.attemptCount, MAX_ATTEMPTS),
+          lt(restaurantGenerations.attemptCount, MAX_GENERATION_ATTEMPTS),
           or(
             eq(restaurantGenerations.status, "pending"),
             eq(restaurantGenerations.status, "failed"),

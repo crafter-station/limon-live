@@ -50,6 +50,11 @@ normalized restaurant, checkpoints that data, then publishes the same data and
 a stable slug. The restaurant route reads only the ready row's stored JSON; it
 does not import or call a provider.
 
+The anonymous generation UUID is a non-enumerable capability: anyone holding a
+generation URL may advance that record, while malformed identifiers are rejected
+before they reach Postgres. This is intentional for the account-free tracer
+bullet and must be revisited if generation URLs become discoverable.
+
 Automated tests exercise the coordinator through persisted state transitions
 and rendered Spanish output. Test setup replaces global `fetch` with a function
 that throws, so adding an accidental paid network call fails the suite.
