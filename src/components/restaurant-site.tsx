@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { NormalizedRestaurant } from "@/domain/restaurant";
 
 export function RestaurantSite({
@@ -13,9 +14,9 @@ export function RestaurantSite({
   return (
     <main className="restaurant-page" lang="es">
       <nav className="restaurant-nav" aria-label="Navegación principal">
-        <a className="wordmark" href="/">
+        <Link className="wordmark" href="/">
           Limon
-        </a>
+        </Link>
         <a href={restaurant.mapsUrl}>Cómo llegar</a>
       </nav>
       <header className="restaurant-hero">

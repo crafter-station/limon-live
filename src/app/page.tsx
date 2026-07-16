@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { submitGeneration } from "@/app/actions";
 import { FIXTURE_MAPS_URL } from "@/domain/generation/fixture-provider";
 
@@ -10,9 +11,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="landing-shell">
       <nav className="landing-nav">
-        <a className="wordmark" href="/">
+        <Link className="wordmark" href="/">
           Limon
-        </a>
+        </Link>
         <span>Fixture edition</span>
       </nav>
       <section className="landing-grid">

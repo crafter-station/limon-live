@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { advanceGeneration } from "@/app/actions";
@@ -26,9 +27,9 @@ export default async function GenerationPage({
 
   return (
     <main className="generation-shell">
-      <a className="wordmark" href="/">
+      <Link className="wordmark" href="/">
         Limon
-      </a>
+      </Link>
       <section className="generation-card">
         <p className="eyebrow">Fixture generation</p>
         <h1>Your restaurant page is ready to build.</h1>
@@ -49,7 +50,7 @@ export default async function GenerationPage({
             </button>
           </form>
         ) : (
-          <a href="/">Try another link</a>
+          <Link href="/">Try another link</Link>
         )}
       </section>
     </main>
