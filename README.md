@@ -12,8 +12,8 @@ calls yet.
 2. Copy the four names from `.env.example` into `.env.local` and provide values.
 3. Apply the checked-in migration with `bun run db:migrate`.
 4. Start Next.js with `bun run dev`.
-5. Submit the prefilled Las Palmeras URL, advance its generation, and open the
-   resulting `/r/las-palmeras` page.
+5. Click the Las Palmeras example, submit its URL, advance the generation, and
+   open the resulting `/r/las-palmeras` page.
 
 The exact server-only environment contract is:
 
