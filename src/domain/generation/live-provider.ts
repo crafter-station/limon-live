@@ -4,8 +4,29 @@ import {
 } from "@/domain/restaurant";
 import type { RestaurantProvider } from "./types";
 
-const FOOD_CATEGORIES =
-  /(?:^|\s)(?:restaurant|restaurante|café|cafe|coffee shop|bakery|panader[ií]a|pasteler[ií]a|pizzer[ií]a|bistro|food court|helader[ií]a|ice cream shop|bar)(?:$|\s)/i;
+const EXACT_FOOD_CATEGORIES = new Set([
+  "restaurant",
+  "restaurante",
+  "cafe",
+  "cafeteria",
+  "cafe or coffee shop",
+  "coffee shop",
+  "bakery",
+  "panaderia",
+  "pasteleria",
+  "pizzeria",
+  "bistro",
+  "food court",
+  "heladeria",
+  "ice cream shop",
+  "bar",
+]);
+
+const TECHNICAL_CATEGORY_NAMES: Record<string, string> = {
+  Restaurant: "Restaurante",
+  CafeOrCoffeeShop: "Café",
+  Bakery: "Panadería",
+};
 
 type ProviderRecord = Record<string, unknown>;
 
@@ -21,6 +42,35 @@ function text(value: unknown): string | null {
 
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function coordinate(value: unknown): number | null {
+  if (typeof value !== "number" && !(typeof value === "string" && value.trim()))
+    return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizedCategory(value: string) {
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isFoodCategory(value: string) {
+  const category = normalizedCategory(value);
+  return (
+    EXACT_FOOD_CATEGORIES.has(category) ||
+    /^(?:restaurante|cafeteria|panaderia|pasteleria|pizzeria)\b/.test(
+      category,
+    ) ||
+    /\b(?:restaurant|cafe|bakery|bistro)$/.test(category)
+  );
 }
 
 function factualDescription(name: string, category: string, city: string) {
@@ -57,17 +107,17 @@ export function normalizeRestaurant(
   const address = text(value.streetAddress ?? value.address);
   const city = text(value.city ?? value.addressLocality);
   const location = value.location as ProviderRecord | undefined;
-  const lat = Number(location?.lat ?? value.latitude);
-  const lng = Number(location?.lng ?? value.longitude);
+  const lat = coordinate(location?.lat ?? value.latitude);
+  const lng = coordinate(location?.lng ?? value.longitude);
 
   if (
     !name ||
     !category ||
     !address ||
     !city ||
-    !FOOD_CATEGORIES.test(category) ||
-    !Number.isFinite(lat) ||
-    !Number.isFinite(lng) ||
+    !isFoodCategory(category) ||
+    lat === null ||
+    lng === null ||
     lat < -90 ||
     lat > 90 ||
     lng < -180 ||
@@ -140,7 +190,8 @@ export function parseGoogleMapsPreview(html: string): ProviderRecord {
       if (text(data.name) && geo && address) {
         return {
           ...data,
-          category: data["@type"],
+          category:
+            TECHNICAL_CATEGORY_NAMES[String(data["@type"])] ?? data["@type"],
           streetAddress: address.streetAddress,
           addressLocality: address.addressLocality,
           latitude: geo.latitude,

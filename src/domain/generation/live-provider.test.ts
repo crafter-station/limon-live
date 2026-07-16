@@ -53,6 +53,36 @@ describe("live restaurant providers", () => {
         mapsUrl,
       ),
     ).toThrow(UnusableRestaurantError);
+    for (const categoryName of [
+      "Cafetería",
+      "CafeOrCoffeeShop",
+      "Restaurante peruano",
+      "Peruvian restaurant",
+    ]) {
+      expect(() =>
+        normalizeRestaurant(
+          { ...place, categoryName },
+          "apify-google-maps",
+          mapsUrl,
+        ),
+      ).not.toThrow();
+    }
+    expect(() =>
+      normalizeRestaurant(
+        { ...place, categoryName: "Restaurant supply store" },
+        "apify-google-maps",
+        mapsUrl,
+      ),
+    ).toThrow(UnusableRestaurantError);
+    for (const invalid of [null, "", false]) {
+      expect(() =>
+        normalizeRestaurant(
+          { ...place, location: { lat: invalid, lng: -77.03 } },
+          "apify-google-maps",
+          mapsUrl,
+        ),
+      ).toThrow(UnusableRestaurantError);
+    }
     expect(() =>
       normalizeRestaurant(
         { ...place, location: undefined },
@@ -91,7 +121,12 @@ describe("live restaurant providers", () => {
     );
     await expect(
       new GoogleMapsPreviewProvider(fetcher as typeof fetch).load(mapsUrl),
-    ).resolves.toMatchObject({ name: "Casa Sol", city: "Cusco" });
+    ).resolves.toMatchObject({
+      name: "Casa Sol",
+      city: "Cusco",
+      category: "Restaurante",
+      description: "Casa Sol: restaurante en Cusco.",
+    });
     expect(fetcher).toHaveBeenCalledWith(
       mapsUrl,
       expect.objectContaining({ headers: { "accept-language": "es" } }),
@@ -146,6 +181,30 @@ describe("live restaurant providers", () => {
     });
     expect(timeout).toHaveBeenCalledWith(APIFY_CLIENT_TIMEOUT_MS);
     timeout.mockRestore();
+  });
+
+  it("rejects malformed paid-provider responses", async () => {
+    for (const body of [
+      "not json",
+      "{}",
+      "[]",
+      JSON.stringify([place, place]),
+    ]) {
+      const provider = new ApifyGoogleMapsProvider(
+        "private-token",
+        vi.fn(async () => new Response(body, { status: 200 })) as typeof fetch,
+      );
+      await expect(provider.load(mapsUrl)).rejects.toThrow();
+    }
+    const provider = new ApifyGoogleMapsProvider(
+      "private-token",
+      vi.fn(
+        async () => new Response("unavailable", { status: 503 }),
+      ) as typeof fetch,
+    );
+    await expect(provider.load(mapsUrl)).rejects.toThrow(
+      "Restaurant data could not be verified.",
+    );
   });
 
   it("creates category-neutral factual copy", () => {
