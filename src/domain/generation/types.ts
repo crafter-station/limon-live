@@ -56,3 +56,10 @@ export interface GenerationRepository {
 export interface RestaurantProvider {
   load(normalizedSource: string): Promise<NormalizedRestaurant>;
 }
+
+export interface RestaurantMediaRetainer {
+  retain(
+    generationId: string,
+    data: NormalizedRestaurant,
+  ): Promise<NormalizedRestaurant>;
+}

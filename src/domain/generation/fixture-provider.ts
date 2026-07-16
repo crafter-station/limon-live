@@ -20,6 +20,7 @@ const fixtureRestaurant: NormalizedRestaurant = {
   rating: 4.6,
   reviewCount: 328,
   reviews: [],
+  photos: [],
   attribution: "Google Maps",
   mapsUrl: FIXTURE_MAPS_URL,
   source: "google-maps-preview",

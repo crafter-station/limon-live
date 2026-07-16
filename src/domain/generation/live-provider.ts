@@ -141,6 +141,11 @@ export function normalizeRestaurant(
   const rawReviews = Array.isArray(value.reviews)
     ? value.reviews.slice(0, 3)
     : [];
+  const rawPhotos = Array.isArray(value.imageUrls)
+    ? value.imageUrls
+    : Array.isArray(value.images)
+      ? value.images
+      : [];
   return normalizedRestaurantSchema.parse({
     name,
     category,
@@ -171,6 +176,26 @@ export function normalizeRestaurant(
             },
           ]
         : [];
+    }),
+    photos: rawPhotos.slice(0, 3).flatMap((entry, index) => {
+      const item =
+        typeof entry === "string"
+          ? { imageUrl: entry }
+          : (entry as ProviderRecord);
+      const url = nonEmptyText(item.imageUrl ?? item.url);
+      if (!url) return [];
+      try {
+        new URL(url);
+      } catch {
+        return [];
+      }
+      return [
+        {
+          url,
+          alt: `Foto ${index + 1} de ${name}`,
+          attribution: nonEmptyText(item.attribution ?? item.authorName),
+        },
+      ];
     }),
     attribution: "Google Maps",
     mapsUrl,

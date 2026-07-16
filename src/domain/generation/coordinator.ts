@@ -6,6 +6,7 @@ import {
   GENERATION_FAILURE_MESSAGE,
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
+  type RestaurantMediaRetainer,
   type RestaurantProvider,
 } from "./types";
 
@@ -38,6 +39,9 @@ export class GenerationCoordinator {
     private readonly repository: GenerationRepository,
     private readonly provider: RestaurantProvider,
     private readonly now: () => Date = () => new Date(),
+    private readonly mediaRetainer: RestaurantMediaRetainer = {
+      retain: async (_generationId, data) => data,
+    },
   ) {}
 
   async submit(sourceUrl: string): Promise<SubmissionResult> {
@@ -101,11 +105,14 @@ export class GenerationCoordinator {
         if (!checkpointed) return { kind: "generating", id };
       }
 
+      const retainedData = normalizedRestaurantSchema.parse(
+        await this.mediaRetainer.retain(id, data),
+      );
       const published = await this.repository.publish(
         id,
         leaseToken,
         restaurantSlug(data.name, claimed.normalizedSource),
-        data,
+        retainedData,
         this.now(),
       );
       if (!published?.slug) return { kind: "generating", id };

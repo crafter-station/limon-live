@@ -9,6 +9,7 @@ import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 import { DrizzleRateLimitRepository } from "@/server/db/rate-limit-repository";
 import { getServerEnv } from "@/server/env";
 import { deriveRequesterKey, utcHour } from "@/server/submission-security";
+import { PlacePhotoRetainer } from "@/server/place-photo-retainer";
 
 export const SUBMISSIONS_PER_HOUR = 5;
 
@@ -20,6 +21,8 @@ export function createGenerationCoordinator() {
       new GoogleMapsPreviewProvider(),
       new ApifyGoogleMapsProvider(env.APIFY_PERSONAL_API_TOKEN),
     ),
+    undefined,
+    new PlacePhotoRetainer(env.BLOB_READ_WRITE_TOKEN),
   );
 }
 

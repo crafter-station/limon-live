@@ -53,6 +53,38 @@ describe("live restaurant providers", () => {
     expect(restaurant.reviews).toHaveLength(1);
   });
 
+  it("keeps only ranked top-level place photos and excludes reviewer imagery", () => {
+    const restaurant = normalizeRestaurant(
+      {
+        ...place,
+        imageUrls: [
+          "https://lh3.googleusercontent.com/place-one",
+          "not a url",
+          "https://lh4.googleusercontent.com/place-three",
+          "https://lh5.googleusercontent.com/ignored-fourth",
+        ],
+        reviews: [
+          {
+            name: "Ana",
+            text: "Buen café",
+            stars: 5,
+            profilePhotoUrl: "https://lh3.googleusercontent.com/avatar",
+            imageUrls: ["https://lh3.googleusercontent.com/review-photo"],
+          },
+        ],
+      },
+      "apify-google-maps",
+      mapsUrl,
+    );
+
+    expect(restaurant.photos.map((photo) => photo.url)).toEqual([
+      "https://lh3.googleusercontent.com/place-one",
+      "https://lh4.googleusercontent.com/place-three",
+    ]);
+    expect(JSON.stringify(restaurant)).not.toContain("avatar");
+    expect(JSON.stringify(restaurant)).not.toContain("review-photo");
+  });
+
   it("rejects unrelated and unlocatable results", () => {
     expect(() =>
       normalizeRestaurant(
