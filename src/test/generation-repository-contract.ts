@@ -36,24 +36,36 @@ export function generationRepositoryContract(
       expect(first.status).toBe("pending");
     });
 
-    it("fences active and stale leases", async () => {
+    it("allows only one simultaneous claim and reclaims it after expiry", async () => {
       const repository = await createRepository();
       const generation = await repository.createOrGet(
         FIXTURE_MAPS_URL,
         FIXTURE_NORMALIZED_SOURCE,
       );
-      const first = await repository.claim(
-        generation.id,
-        leaseTokens[0],
-        new Date("2026-07-16T09:59:00.000Z"),
-        new Date("2026-07-16T10:00:00.000Z"),
-      );
+      const [first, competing] = await Promise.all([
+        repository.claim(
+          generation.id,
+          leaseTokens[0],
+          new Date("2026-07-16T09:59:00.000Z"),
+          new Date("2026-07-16T10:00:00.000Z"),
+        ),
+        repository.claim(
+          generation.id,
+          leaseTokens[1],
+          new Date("2026-07-16T09:59:00.000Z"),
+          new Date("2026-07-16T10:00:00.000Z"),
+        ),
+      ]);
 
-      expect(first).toMatchObject({ attemptCount: 1, status: "generating" });
+      expect([first, competing].filter(Boolean)).toHaveLength(1);
+      expect(await repository.findById(generation.id)).toMatchObject({
+        attemptCount: 1,
+        status: "generating",
+      });
       expect(
         await repository.claim(
           generation.id,
-          leaseTokens[1],
+          leaseTokens[2],
           new Date("2026-07-16T09:59:30.000Z"),
           new Date("2026-07-16T10:00:30.000Z"),
         ),
@@ -61,11 +73,11 @@ export function generationRepositoryContract(
       expect(
         await repository.claim(
           generation.id,
-          leaseTokens[1],
+          leaseTokens[2],
           new Date("2026-07-16T10:01:00.000Z"),
           new Date("2026-07-16T10:02:00.000Z"),
         ),
-      ).toMatchObject({ attemptCount: 2, leaseToken: leaseTokens[1] });
+      ).toMatchObject({ attemptCount: 2, leaseToken: leaseTokens[2] });
     });
 
     it("rejects checkpoint and publication writes from a lost lease", async () => {
@@ -84,11 +96,17 @@ export function generationRepositoryContract(
         new Date("2026-07-16T09:59:00.000Z"),
         now,
       );
+      await repository.claim(
+        generation.id,
+        leaseTokens[1],
+        new Date("2026-07-16T10:01:00.000Z"),
+        new Date("2026-07-16T10:02:00.000Z"),
+      );
 
       expect(
         await repository.saveCheckpoint(
           generation.id,
-          leaseTokens[1],
+          leaseTokens[0],
           data,
           now,
         ),
@@ -96,7 +114,7 @@ export function generationRepositoryContract(
       expect(
         await repository.publish(
           generation.id,
-          leaseTokens[1],
+          leaseTokens[0],
           "las-palmeras",
           data,
           now,
@@ -106,6 +124,43 @@ export function generationRepositoryContract(
         status: "generating",
         providerCheckpoint: null,
         publishedData: null,
+      });
+    });
+
+    it("checkpoints and publishes stored data for the lease owner", async () => {
+      const repository = await createRepository();
+      const generation = await repository.createOrGet(
+        FIXTURE_MAPS_URL,
+        FIXTURE_NORMALIZED_SOURCE,
+      );
+      const data = await new FixtureRestaurantProvider().load(
+        FIXTURE_NORMALIZED_SOURCE,
+      );
+      const now = new Date("2026-07-16T10:00:00.000Z");
+      await repository.claim(
+        generation.id,
+        leaseTokens[0],
+        new Date("2026-07-16T09:59:00.000Z"),
+        now,
+      );
+
+      await expect(
+        repository.saveCheckpoint(generation.id, leaseTokens[0], data, now),
+      ).resolves.toBe(true);
+      await expect(
+        repository.publish(
+          generation.id,
+          leaseTokens[0],
+          "las-palmeras",
+          data,
+          now,
+        ),
+      ).resolves.toMatchObject({ status: "ready", slug: "las-palmeras" });
+      expect(await repository.findReadyBySlug("las-palmeras")).toMatchObject({
+        id: generation.id,
+        providerCheckpoint: data,
+        publishedData: data,
+        leaseToken: null,
       });
     });
 
