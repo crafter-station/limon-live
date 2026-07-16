@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useState } from "react";
 import type { PublicGenerationStatus } from "@/domain/generation/public-status";
 import { GENERATION_FAILURE_MESSAGE } from "@/domain/generation/types";
 
 const POLL_INTERVAL_MS = 1_500;
 const DELAYED_AFTER_MS = 30_000;
+const defaultNavigate = (url: string) => window.location.assign(url);
 
 export function GenerationProgress({
   id,
   initialStatus,
-  navigate = (url) => window.location.assign(url),
+  navigate = defaultNavigate,
 }: {
   id: string;
   initialStatus: PublicGenerationStatus;
@@ -21,16 +22,12 @@ export function GenerationProgress({
   const [delayed, setDelayed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
-  const applyStatus = useEffectEvent((status: PublicGenerationStatus) => {
-    setGeneration(status);
-    if (status.status === "ready" && status.slug) {
-      navigate(`/r/${status.slug}`);
-    }
-  });
-
   useEffect(() => {
-    void retryKey;
-    if (generation.status === "ready" || generation.status === "failed") return;
+    if (
+      retryKey === 0 &&
+      (initialStatus.status === "ready" || initialStatus.status === "failed")
+    )
+      return;
 
     let active = true;
     let pollTimer: ReturnType<typeof setTimeout>;
@@ -46,7 +43,10 @@ export function GenerationProgress({
       if (!response.ok) throw new Error("Generation request failed");
       const status: PublicGenerationStatus = await response.json();
       if (!active) return;
-      applyStatus(status);
+      setGeneration(status);
+      if (status.status === "ready" && status.slug) {
+        navigate(`/r/${status.slug}`);
+      }
       if (status.status === "ready" || status.status === "failed") {
         active = false;
         clearTimeout(delayedTimer);
@@ -75,7 +75,7 @@ export function GenerationProgress({
       clearTimeout(delayedTimer);
       clearTimeout(pollTimer);
     };
-  }, [id, retryKey]);
+  }, [id, retryKey, initialStatus.status, navigate]);
 
   const retry = () => {
     setDelayed(false);
