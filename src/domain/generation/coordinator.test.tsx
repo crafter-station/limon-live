@@ -8,6 +8,7 @@ import {
   FIXTURE_MAPS_URL,
   FixtureRestaurantProvider,
 } from "./fixture-provider";
+import { ApifyGoogleMapsProvider } from "./live-provider";
 
 describe("fixture generation golden path", () => {
   it("creates stable, non-empty, venue-specific slugs", () => {
@@ -153,6 +154,46 @@ describe("fixture generation golden path", () => {
       slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
     });
     expect(load).toHaveBeenCalledOnce();
+  });
+
+  it("reuses an Apify-backed paid checkpoint after publication interruption", async () => {
+    const repository = new MemoryGenerationRepository();
+    const paidFetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify([
+            {
+              title: "Las Palmeras",
+              categoryName: "Restaurante peruano",
+              address: "Av. Alfredo Benavides 1901, Miraflores",
+              city: "Lima",
+              location: { lat: -12.1211, lng: -77.0297 },
+              url: FIXTURE_MAPS_URL,
+            },
+          ]),
+          { status: 200 },
+        ),
+    );
+    let now = new Date("2026-07-16T10:00:00.000Z");
+    const coordinator = new GenerationCoordinator(
+      repository,
+      new ApifyGoogleMapsProvider("private-token", paidFetch as typeof fetch),
+      () => now,
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+    repository.interruptNextPublication();
+
+    expect(await coordinator.advance(submission.id)).toEqual({
+      kind: "generating",
+      id: submission.id,
+    });
+    now = new Date("2026-07-16T10:02:00.000Z");
+    await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+      kind: "ready",
+    });
+    expect(paidFetch).toHaveBeenCalledOnce();
   });
 
   it("persists only a safe error when a provider fails", async () => {
