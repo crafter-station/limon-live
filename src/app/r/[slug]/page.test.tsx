@@ -14,16 +14,25 @@ vi.mock("@/server/db/generation-repository", () => ({
   },
 }));
 
-import PublishedRestaurantPage from "./page";
+import PublishedRestaurantPage, { metadata } from "./page";
 
 describe("published restaurant page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders stored data without invoking the provider", async () => {
+  it("renders a sparse stored page without invoking the provider", async () => {
     const provider = new FixtureRestaurantProvider();
     const data = await provider.load(FIXTURE_NORMALIZED_SOURCE);
+    const sparseData = {
+      ...data,
+      phone: null,
+      website: null,
+      hours: [],
+      rating: null,
+      reviewCount: null,
+      reviews: [],
+    };
     const load = vi.spyOn(FixtureRestaurantProvider.prototype, "load");
     findReadyBySlug.mockResolvedValue({
       id: "00000000-0000-4000-8000-000000000001",
@@ -31,7 +40,7 @@ describe("published restaurant page", () => {
       normalizedSource: FIXTURE_NORMALIZED_SOURCE,
       status: "ready",
       providerCheckpoint: data,
-      publishedData: data,
+      publishedData: sparseData,
       slug: "las-palmeras",
       safeError: null,
       leaseToken: null,
@@ -49,5 +58,17 @@ describe("published restaurant page", () => {
     expect(findReadyBySlug).toHaveBeenCalledWith("las-palmeras");
     expect(load).not.toHaveBeenCalled();
     expect(html).toContain("Restaurante Las Palmeras");
+    expect(html).toContain(sparseData.category);
+    expect(html).toContain(sparseData.description);
+    expect(html).toContain(sparseData.city);
+    expect(html).toContain(sparseData.address);
+    expect(html).toContain("Ver en Google Maps");
+    expect(html).toContain(sparseData.mapsUrl);
+    expect(html).toContain("Información importada el");
+    expect(html).toContain("Fuente: Google Maps");
+    expect(html).toContain("No verificado por el restaurante");
+    expect(html).not.toContain("Llamar");
+    expect(html).not.toContain("reseñas");
+    expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 });
