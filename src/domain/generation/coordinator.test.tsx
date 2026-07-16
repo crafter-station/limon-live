@@ -1,133 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RestaurantSite } from "@/components/restaurant-site";
-import type { NormalizedRestaurant } from "@/domain/restaurant";
+import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
+import { generationRepositoryContract } from "@/test/generation-repository-contract";
 import { GenerationCoordinator } from "./coordinator";
 import {
   FIXTURE_MAPS_URL,
   FixtureRestaurantProvider,
 } from "./fixture-provider";
-import type { Generation, GenerationRepository } from "./types";
-
-class MemoryGenerationRepository implements GenerationRepository {
-  private readonly records = new Map<string, Generation>();
-  private interruptPublication = false;
-
-  interruptNextPublication() {
-    this.interruptPublication = true;
-  }
-
-  async createOrGet(sourceUrl: string, normalizedSource: string) {
-    const existing = [...this.records.values()].find(
-      (record) => record.normalizedSource === normalizedSource,
-    );
-    if (existing) return structuredClone(existing);
-
-    const now = new Date("2026-07-16T10:00:00.000Z");
-    const generation: Generation = {
-      id: crypto.randomUUID(),
-      sourceUrl,
-      normalizedSource,
-      status: "pending",
-      providerCheckpoint: null,
-      publishedData: null,
-      slug: null,
-      safeError: null,
-      leaseToken: null,
-      leaseAcquiredAt: null,
-      attemptCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.records.set(generation.id, generation);
-    return structuredClone(generation);
-  }
-
-  async findById(id: string) {
-    const record = this.records.get(id);
-    return record ? structuredClone(record) : null;
-  }
-
-  async findReadyBySlug(slug: string) {
-    const record = [...this.records.values()].find(
-      (candidate) => candidate.status === "ready" && candidate.slug === slug,
-    );
-    return record ? structuredClone(record) : null;
-  }
-
-  async claim(id: string, leaseToken: string, staleBefore: Date, now: Date) {
-    const record = this.records.get(id);
-    if (
-      !record ||
-      record.status === "ready" ||
-      record.attemptCount >= 3 ||
-      (record.status === "generating" &&
-        record.leaseAcquiredAt &&
-        record.leaseAcquiredAt >= staleBefore)
-    ) {
-      return null;
-    }
-    Object.assign(record, {
-      status: "generating" as const,
-      leaseToken,
-      leaseAcquiredAt: now,
-      safeError: null,
-      attemptCount: record.attemptCount + 1,
-      updatedAt: now,
-    });
-    return structuredClone(record);
-  }
-
-  async saveCheckpoint(
-    id: string,
-    leaseToken: string,
-    data: NormalizedRestaurant,
-    now: Date,
-  ) {
-    const record = this.records.get(id);
-    if (record?.leaseToken !== leaseToken) return false;
-    record.providerCheckpoint = structuredClone(data);
-    record.updatedAt = now;
-    return true;
-  }
-
-  async publish(
-    id: string,
-    leaseToken: string,
-    slug: string,
-    data: NormalizedRestaurant,
-    now: Date,
-  ) {
-    const record = this.records.get(id);
-    if (record?.leaseToken !== leaseToken) return null;
-    if (this.interruptPublication) {
-      this.interruptPublication = false;
-      record.leaseToken = crypto.randomUUID();
-      return null;
-    }
-    Object.assign(record, {
-      status: "ready" as const,
-      publishedData: structuredClone(data),
-      slug,
-      leaseToken: null,
-      leaseAcquiredAt: null,
-      updatedAt: now,
-    });
-    return structuredClone(record);
-  }
-
-  async fail(id: string, leaseToken: string, safeError: string, now: Date) {
-    const record = this.records.get(id);
-    if (record?.leaseToken !== leaseToken) return;
-    Object.assign(record, {
-      status: "failed" as const,
-      safeError,
-      leaseToken: null,
-      leaseAcquiredAt: null,
-      updatedAt: now,
-    });
-  }
-}
 
 describe("fixture generation golden path", () => {
   it("persists and reuses equivalent pending submissions", async () => {
@@ -148,6 +28,38 @@ describe("fixture generation golden path", () => {
       first.kind === "generation" ? first.id : "",
     );
     expect(persisted).toMatchObject({ status: "pending", attemptCount: 0 });
+  });
+
+  it("finalizes a stale interrupted third attempt", async () => {
+    const repository = new MemoryGenerationRepository();
+    let now = new Date("2026-07-16T10:00:00.000Z");
+    const coordinator = new GenerationCoordinator(
+      repository,
+      new FixtureRestaurantProvider(),
+      () => now,
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      repository.interruptNextPublication();
+      expect(await coordinator.advance(submission.id)).toEqual({
+        kind: "generating",
+        id: submission.id,
+      });
+      now = new Date(now.getTime() + 120_000);
+    }
+
+    expect(await coordinator.advance(submission.id)).toEqual({
+      kind: "failed",
+      id: submission.id,
+    });
+    expect(await repository.findById(submission.id)).toMatchObject({
+      status: "failed",
+      attemptCount: 3,
+      leaseToken: null,
+    });
   });
 
   it("checkpoints, publishes, and renders only normalized stored data", async () => {
@@ -244,4 +156,8 @@ describe("fixture generation golden path", () => {
     expect(persisted?.status).toBe("failed");
     expect(persisted?.safeError).not.toContain("upstream");
   });
+});
+
+generationRepositoryContract("memory generation repository", async () => {
+  return new MemoryGenerationRepository();
 });

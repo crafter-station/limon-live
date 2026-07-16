@@ -1,16 +1,23 @@
 import "server-only";
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
+import type { PgDatabase } from "drizzle-orm/pg-core";
+import type { PgQueryResultHKT } from "drizzle-orm/pg-core/session";
 import type { NormalizedRestaurant } from "@/domain/restaurant";
 import {
+  GENERATION_FAILURE_MESSAGE,
   type Generation,
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
 } from "@/domain/generation/types";
 import { getDatabase } from "./client";
-import { restaurantGenerations } from "./schema";
+import * as schema from "./schema";
+
+type GenerationDatabase = PgDatabase<PgQueryResultHKT, typeof schema>;
+
+const { restaurantGenerations } = schema;
 
 export class DrizzleGenerationRepository implements GenerationRepository {
-  private readonly database = getDatabase();
+  constructor(private readonly database: GenerationDatabase = getDatabase()) {}
 
   async createOrGet(
     sourceUrl: string,
@@ -63,6 +70,27 @@ export class DrizzleGenerationRepository implements GenerationRepository {
     staleBefore: Date,
     now: Date,
   ): Promise<Generation | null> {
+    await this.database
+      .update(restaurantGenerations)
+      .set({
+        status: "failed",
+        safeError: GENERATION_FAILURE_MESSAGE,
+        leaseToken: null,
+        leaseAcquiredAt: null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(restaurantGenerations.id, id),
+          eq(restaurantGenerations.status, "generating"),
+          gte(restaurantGenerations.attemptCount, MAX_GENERATION_ATTEMPTS),
+          or(
+            isNull(restaurantGenerations.leaseAcquiredAt),
+            lt(restaurantGenerations.leaseAcquiredAt, staleBefore),
+          ),
+        ),
+      );
+
     const [claimed] = await this.database
       .update(restaurantGenerations)
       .set({

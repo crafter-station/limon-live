@@ -42,7 +42,8 @@ export default async function GenerationPage({
             {generation.safeError}
           </p>
         ) : null}
-        {generation.attemptCount < MAX_GENERATION_ATTEMPTS ? (
+        {generation.status === "generating" ||
+        generation.attemptCount < MAX_GENERATION_ATTEMPTS ? (
           <form action={advanceGeneration}>
             <input name="id" type="hidden" value={id} />
             <button className="primary-button" type="submit">

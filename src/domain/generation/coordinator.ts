@@ -2,14 +2,13 @@ import { randomUUID } from "node:crypto";
 import { normalizedRestaurantSchema } from "@/domain/restaurant";
 import { normalizeFixtureSource } from "./fixture-provider";
 import {
+  GENERATION_FAILURE_MESSAGE,
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
   type RestaurantProvider,
 } from "./types";
 
 const LEASE_DURATION_MS = 60_000;
-const PUBLIC_FAILURE_MESSAGE =
-  "No pudimos generar el sitio en este momento. Inténtalo de nuevo.";
 
 export type SubmissionResult =
   | { kind: "generation"; id: string }
@@ -104,10 +103,10 @@ export class GenerationCoordinator {
       await this.repository.fail(
         id,
         leaseToken,
-        PUBLIC_FAILURE_MESSAGE,
+        GENERATION_FAILURE_MESSAGE,
         this.now(),
       );
-      throw new GenerationFailedError(PUBLIC_FAILURE_MESSAGE);
+      throw new GenerationFailedError(GENERATION_FAILURE_MESSAGE);
     }
   }
 }
