@@ -87,14 +87,14 @@ function getPathIdentities(url: URL): PlaceIdentity[] {
   if (!data) return [];
 
   const identities = [
-    ...Array.from(data.matchAll(/!19s([^!/?#]+)/g), (match) => [
-      "place_id" as const,
-      match[1],
-    ]),
-    ...Array.from(data.matchAll(/!1s([^!/?#]+)/g), (match) => [
-      "ftid" as const,
-      match[1],
-    ]),
+    ...Array.from(
+      data.matchAll(/!19s([^!/?#]+)/g),
+      (match) => ["place_id", match[1]] as const,
+    ),
+    ...Array.from(
+      data.matchAll(/!1s([^!/?#]+)/g),
+      (match) => ["ftid", match[1]] as const,
+    ),
   ].map(([name, encodedValue]) => {
     let value: string;
     try {
