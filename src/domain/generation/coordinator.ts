@@ -26,13 +26,10 @@ export class GenerationCoordinator {
     private readonly repository: GenerationRepository,
     private readonly provider: RestaurantProvider,
     private readonly now: () => Date = () => new Date(),
-    private readonly resolveSource: (
-      sourceUrl: string,
-    ) => Promise<string> = resolveGoogleMapsUrl,
   ) {}
 
   async submit(sourceUrl: string): Promise<SubmissionResult> {
-    const normalizedSource = await this.resolveSource(sourceUrl);
+    const normalizedSource = await resolveGoogleMapsUrl(sourceUrl);
     const generation = await this.repository.createOrGet(
       sourceUrl,
       normalizedSource,
