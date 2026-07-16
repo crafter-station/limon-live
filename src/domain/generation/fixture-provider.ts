@@ -20,33 +20,6 @@ const fixtureRestaurant: NormalizedRestaurant = {
   importedAt: "2026-07-16T00:00:00.000Z",
 };
 
-export class UnsupportedFixtureUrlError extends Error {}
-
-export function normalizeFixtureSource(input: string): string {
-  let url: URL;
-
-  try {
-    url = new URL(input.trim());
-  } catch {
-    throw new UnsupportedFixtureUrlError(
-      "Use the supported Las Palmeras Google Maps URL.",
-    );
-  }
-
-  const fixture = new URL(FIXTURE_MAPS_URL);
-  if (
-    url.protocol !== "https:" ||
-    url.hostname !== fixture.hostname ||
-    url.pathname.replace(/\/$/, "") !== fixture.pathname
-  ) {
-    throw new UnsupportedFixtureUrlError(
-      "Use the supported Las Palmeras Google Maps URL.",
-    );
-  }
-
-  return FIXTURE_NORMALIZED_SOURCE;
-}
-
 export class FixtureRestaurantProvider implements RestaurantProvider {
   async load(normalizedSource: string): Promise<NormalizedRestaurant> {
     if (normalizedSource !== FIXTURE_NORMALIZED_SOURCE) {

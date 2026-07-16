@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
   varchar,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import type { NormalizedRestaurant } from "@/domain/restaurant";
 
@@ -51,5 +52,21 @@ export const restaurantGenerations = pgTable(
       "generation_attempt_count_nonnegative",
       sql`${table.attemptCount} >= 0`,
     ),
+  ],
+);
+
+export const submissionRateLimits = pgTable(
+  "submission_rate_limits",
+  {
+    requesterKey: varchar("requester_key", { length: 64 }).notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    requestCount: integer("request_count").notNull().default(1),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.requesterKey, table.windowStart] }),
+    check("rate_limit_count_positive", sql`${table.requestCount} > 0`),
   ],
 );
