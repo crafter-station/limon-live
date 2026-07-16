@@ -65,6 +65,9 @@ describe("live restaurant providers", () => {
       "Pub",
       "TeaHouse",
       "DessertShop",
+      "Sandwich shop",
+      "Food truck",
+      "Deli",
     ]) {
       expect(() =>
         normalizeRestaurant(
@@ -84,6 +87,9 @@ describe("live restaurant providers", () => {
     for (const categoryName of [
       "Tea house furniture store",
       "Dessert shop supplier",
+      "Sandwich shop equipment",
+      "Food truck rental",
+      "Deli packaging supplier",
     ]) {
       expect(() =>
         normalizeRestaurant(
@@ -218,6 +224,26 @@ describe("live restaurant providers", () => {
     timeout.mockRestore();
   });
 
+  it("accepts equivalent canonical paid-result URLs", async () => {
+    const placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4";
+    const requestedUrl = `https://www.google.com/maps?place_id=${placeId}`;
+    const returnedUrl = `https://www.google.com/maps/place/Cafe/data=!4m2!3m1!19s${placeId}`;
+    const provider = new ApifyGoogleMapsProvider(
+      "private-token",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify([{ ...place, url: returnedUrl }]), {
+            status: 200,
+          }),
+      ) as typeof fetch,
+    );
+
+    await expect(provider.load(requestedUrl)).resolves.toMatchObject({
+      name: "Café Limón",
+      mapsUrl: requestedUrl,
+    });
+  });
+
   it("rejects malformed paid-provider responses", async () => {
     for (const body of [
       "not json",
@@ -268,6 +294,20 @@ describe("live restaurant providers", () => {
         mapsUrl,
       ).description,
     ).toBe("Pan del Sol: panadería en Lima.");
+    expect(
+      normalizeRestaurant(
+        { ...place, categoryName: "Peruvian restaurant" },
+        "apify-google-maps",
+        mapsUrl,
+      ).description,
+    ).toBe("Café Limón: restaurante en Lima.");
+    expect(
+      normalizeRestaurant(
+        { ...place, categoryName: "Food truck" },
+        "apify-google-maps",
+        mapsUrl,
+      ).description,
+    ).toBe("Café Limón: puesto de comida en Lima.");
   });
 
   it("falls back to baseline and fails when both sources are unusable", async () => {

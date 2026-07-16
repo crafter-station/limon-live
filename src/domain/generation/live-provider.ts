@@ -2,6 +2,8 @@ import {
   normalizedRestaurantSchema,
   type NormalizedRestaurant,
 } from "@/domain/restaurant";
+import { resolveGoogleMapsUrl } from "./maps-url";
+import { foldText } from "./text";
 import type { RestaurantProvider } from "./types";
 
 const EXACT_FOOD_CATEGORIES = new Set([
@@ -23,7 +25,26 @@ const EXACT_FOOD_CATEGORIES = new Set([
   "pub",
   "tea house",
   "dessert shop",
+  "sandwich shop",
+  "food truck",
+  "deli",
 ]);
+
+const SPANISH_CATEGORY_NAMES: Record<string, string> = {
+  restaurant: "restaurante",
+  "cafe or coffee shop": "café",
+  "coffee shop": "cafetería",
+  cafe: "café",
+  bakery: "panadería",
+  bistro: "bistró",
+  "food court": "patio de comidas",
+  "ice cream shop": "heladería",
+  "tea house": "salón de té",
+  "dessert shop": "tienda de postres",
+  "sandwich shop": "sandwichería",
+  "food truck": "puesto de comida",
+  deli: "delicatessen",
+};
 
 const TECHNICAL_CATEGORY_NAMES: Record<string, string> = {
   Restaurant: "Restaurante",
@@ -56,11 +77,7 @@ function coordinate(value: unknown): number | null {
 }
 
 function normalizedCategory(value: string) {
-  return value
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
+  return foldText(value.replace(/([a-z])([A-Z])/g, "$1 $2"))
     .replace(/[^a-z ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -78,7 +95,12 @@ function isFoodCategory(value: string) {
 }
 
 function factualDescription(name: string, category: string, city: string) {
-  return `${name}: ${category.toLocaleLowerCase("es")} en ${city}.`;
+  const normalized = normalizedCategory(category);
+  const spanishCategory =
+    SPANISH_CATEGORY_NAMES[normalized] ??
+    (normalized.endsWith(" restaurant") ? "restaurante" : null) ??
+    category.toLocaleLowerCase("es");
+  return `${name}: ${spanishCategory} en ${city}.`;
 }
 
 function sameNormalizedText(left: string, right: string) {
@@ -277,7 +299,18 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     if (!Array.isArray(items) || items.length !== 1)
       throw new UnusableRestaurantError();
     const item = items[0] as ProviderRecord;
-    if (nonEmptyText(item.url) !== normalizedSource)
+    const returnedUrl = nonEmptyText(item.url);
+    let normalizedReturnedUrl: string;
+    try {
+      normalizedReturnedUrl = returnedUrl
+        ? await resolveGoogleMapsUrl(returnedUrl, async () => {
+            throw new UnusableRestaurantError();
+          })
+        : "";
+    } catch {
+      throw new UnusableRestaurantError();
+    }
+    if (normalizedReturnedUrl !== normalizedSource)
       throw new UnusableRestaurantError();
     return normalizeRestaurant(item, "apify-google-maps", normalizedSource);
   }

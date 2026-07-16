@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { normalizedRestaurantSchema } from "@/domain/restaurant";
 import { resolveGoogleMapsUrl } from "./maps-url";
+import { foldText } from "./text";
 import {
   GENERATION_FAILURE_MESSAGE,
   type GenerationRepository,
@@ -11,10 +12,7 @@ import {
 const LEASE_DURATION_MS = 60_000;
 
 export function restaurantSlug(name: string, normalizedSource: string) {
-  const readable = name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
+  const readable = foldText(name)
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   const venueId = createHash("sha256")
