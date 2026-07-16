@@ -1,10 +1,8 @@
 # Limon
 
 Limon turns a supported full or shortened Google Maps place link into a
-persisted Spanish restaurant page. The current enrichment step deliberately
-uses a local Las Palmeras fixture provider: submission and duplicate handling
-are production-shaped without adding paid Google, Apify, Vercel Blob, or AI
-calls yet.
+persisted Spanish restaurant page. Production import uses a public Maps preview
+as a degraded baseline and Apify enrichment when configured.
 
 ## Setup
 
@@ -12,8 +10,32 @@ calls yet.
 2. Copy the four names from `.env.example` into `.env.local` and provide values.
 3. Apply the checked-in migration with `bun run db:migrate`.
 4. Start Next.js with `bun run dev`.
-5. Click the Las Palmeras example, submit its URL, advance the generation, and
-   open the resulting `/r/las-palmeras` page.
+5. Submit a supported Google Maps place URL and advance the generation.
+
+The current `compass/crawler-google-places` input and dataset contracts were
+verified against the actor's published schema on 2026-07-16. A paid run is
+bounded to one place, Spanish, three reviews, three images, a 40-second actor
+timeout, a 45-second client timeout, and USD 0.50. Contacts, directories,
+image-author and review-personal-data scraping, and competitor analysis are
+disabled. The Apify token is sent only in the authorization header.
+
+Live debugging is an explicitly paid path. Automated tests use representative
+preview and Apify fixtures and never invoke the actor.
+
+The replaceable public-preview adapter intentionally supports only a
+Schema.org JSON-LD representation observed in a Maps place response:
+one `application/ld+json` block with `name`, `@type`, `address.streetAddress`,
+`address.addressLocality`, and `geo.latitude`/`geo.longitude`. The redacted
+representative response in
+`src/domain/generation/fixtures/google-maps-preview.html` locks that
+undocumented contract down. Its header records the capture date and exact
+redactions; the JSON-LD structure and field types remain unchanged. Additional,
+missing, or malformed JSON-LD blocks and any other representation fail closed
+and leave the paid adapter or sanitized failure path to handle the import.
+`google-maps-current-preview.html` records a traceable 2026-07-16 response
+shape that exposes only undocumented positional state, without a trustworthy
+address/category tuple. It deliberately fails closed rather than guessing at
+that state; this fixture makes current degraded-baseline behavior explicit.
 
 The exact server-only environment contract is:
 
@@ -22,9 +44,8 @@ The exact server-only environment contract is:
 - `BLOB_READ_WRITE_TOKEN`
 - `AI_GATEWAY_API_KEY`
 
-Only `DATABASE_URL` is used by this fixture slice. All four are validated
-together at the server boundary because later provider work must not expand or
-leak the contract. No variable is prefixed with `NEXT_PUBLIC_`.
+All four are validated together at the server boundary. No variable is prefixed
+with `NEXT_PUBLIC_`.
 
 ## Commands
 
@@ -47,7 +68,7 @@ leak the contract. No variable is prefixed with `NEXT_PUBLIC_`.
 The landing Server Action validates and normalizes supported Google Maps place
 URLs, manually follows bounded short-link redirects, and atomically creates or
 reuses a `restaurant_generations` row. The generation coordinator
-claims that row with a fenced lease, asks the injected fixture provider for a
+claims that row with a fenced lease, asks the injected live provider for a
 normalized restaurant, checkpoints that data, then publishes the same data and
 a stable slug. The restaurant route reads only the ready row's stored JSON; it
 does not import or call a provider.
@@ -68,11 +89,22 @@ Automated tests exercise the coordinator through persisted state transitions
 and rendered Spanish output. Test setup replaces global `fetch` with a function
 that throws, so adding an accidental paid network call fails the suite.
 
-## Fixture Limitations
+### Live provider boundary
 
-- General supported Maps place URLs can create generation records, but only the
-  documented Las Palmeras place has fixture enrichment until live providers are
-  added.
+The preview adapter, paid adapter, normalization policy, and reconciliation
+remain one internal module by design. A repository search after the issue #5
+trust fixes finds provider-class references in production only in
+`live-provider.ts` and the single composition root in `generation-service.ts`;
+there is no independently consumed adapter contract. The 12 issue-branch
+commits that touched the module all changed this same fail-closed import
+boundary, while the normalized model and coordinator remain separate modules.
+Splitting the 334-line implementation now would expose seams without an
+independent change driver. Extract an adapter when a second production consumer
+appears, or when one transport acquires an independently tested lifecycle or
+release cadence; keep `LiveRestaurantProvider` as the reconciliation boundary.
+
+## Limitations
+
 - Published pages are immutable and excluded from indexing.
 - Public source information may be incomplete or outdated and is not verified
   by the restaurant.

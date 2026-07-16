@@ -1,10 +1,10 @@
 import Link from "next/link";
-import type { NormalizedRestaurant } from "@/domain/restaurant";
+import type { StoredRestaurant } from "@/domain/restaurant";
 
 export function RestaurantSite({
   restaurant,
 }: {
-  restaurant: NormalizedRestaurant;
+  restaurant: StoredRestaurant;
 }) {
   const importedDate = new Intl.DateTimeFormat("es-PE", {
     dateStyle: "long",
@@ -55,6 +55,7 @@ export function RestaurantSite({
       </section>
       <footer className="restaurant-footer">
         <p>Información importada el {importedDate}.</p>
+        <p>Fuente: {restaurant.attribution}.</p>
         <p>
           Sitio generado automáticamente por Limon con información pública. No
           verificado por el restaurante.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { RestaurantSite } from "@/components/restaurant-site";
-import { normalizedRestaurantSchema } from "@/domain/restaurant";
+import { storedRestaurantSchema } from "@/domain/restaurant";
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 
 export const metadata: Metadata = {
@@ -21,6 +21,6 @@ export default async function PublishedRestaurantPage({
 
   if (!generation?.publishedData) notFound();
 
-  const restaurant = normalizedRestaurantSchema.parse(generation.publishedData);
+  const restaurant = storedRestaurantSchema.parse(generation.publishedData);
   return <RestaurantSite restaurant={restaurant} />;
 }

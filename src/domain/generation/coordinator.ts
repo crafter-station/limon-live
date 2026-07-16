@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { normalizedRestaurantSchema } from "@/domain/restaurant";
 import { resolveGoogleMapsUrl } from "./maps-url";
+import { foldText } from "./text";
 import {
   GENERATION_FAILURE_MESSAGE,
   type GenerationRepository,
@@ -9,6 +10,17 @@ import {
 } from "./types";
 
 const LEASE_DURATION_MS = 60_000;
+
+export function restaurantSlug(name: string, normalizedSource: string) {
+  const readable = foldText(name)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  const venueId = createHash("sha256")
+    .update(normalizedSource)
+    .digest("hex")
+    .slice(0, 10);
+  return `${readable || "restaurante"}-${venueId}`;
+}
 
 export type SubmissionResult =
   | { kind: "generation"; id: string }
@@ -92,7 +104,7 @@ export class GenerationCoordinator {
       const published = await this.repository.publish(
         id,
         leaseToken,
-        "las-palmeras",
+        restaurantSlug(data.name, claimed.normalizedSource),
         data,
         this.now(),
       );

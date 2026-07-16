@@ -3,13 +3,25 @@ import { describe, expect, it, vi } from "vitest";
 import { RestaurantSite } from "@/components/restaurant-site";
 import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
 import { generationRepositoryContract } from "@/test/generation-repository-contract";
-import { GenerationCoordinator } from "./coordinator";
+import { GenerationCoordinator, restaurantSlug } from "./coordinator";
 import {
   FIXTURE_MAPS_URL,
   FixtureRestaurantProvider,
 } from "./fixture-provider";
+import { ApifyGoogleMapsProvider } from "./live-provider";
 
 describe("fixture generation golden path", () => {
+  it("creates stable, non-empty, venue-specific slugs", () => {
+    expect(
+      restaurantSlug("東京食堂", "https://maps.google.com/place/one"),
+    ).toMatch(/^restaurante-[a-f0-9]{10}$/);
+    expect(
+      restaurantSlug("Casa Sol", "https://maps.google.com/place/one"),
+    ).not.toBe(restaurantSlug("Casa Sol", "https://maps.google.com/place/two"));
+    expect(
+      restaurantSlug("Casa Sol", "https://maps.google.com/place/one"),
+    ).toBe(restaurantSlug("Casa Sol", "https://maps.google.com/place/one"));
+  });
   it("persists and reuses equivalent pending submissions", async () => {
     const repository = new MemoryGenerationRepository();
     const coordinator = new GenerationCoordinator(
@@ -74,10 +86,13 @@ describe("fixture generation golden path", () => {
     const result = await coordinator.advance(submission.id);
     const persisted = await repository.findById(submission.id);
 
-    expect(result).toEqual({ kind: "ready", slug: "las-palmeras" });
+    expect(result).toEqual({
+      kind: "ready",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
+    });
     expect(persisted).toMatchObject({
       status: "ready",
-      slug: "las-palmeras",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
       attemptCount: 1,
       providerCheckpoint: { name: "Restaurante Las Palmeras" },
       publishedData: { city: "Lima" },
@@ -106,7 +121,10 @@ describe("fixture generation golden path", () => {
 
     const duplicate = await coordinator.submit(`${FIXTURE_MAPS_URL}#reviews`);
 
-    expect(duplicate).toEqual({ kind: "ready", slug: "las-palmeras" });
+    expect(duplicate).toEqual({
+      kind: "ready",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
+    });
     expect(load).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -133,9 +151,49 @@ describe("fixture generation golden path", () => {
     now = new Date("2026-07-16T10:02:00.000Z");
     expect(await coordinator.advance(submission.id)).toEqual({
       kind: "ready",
-      slug: "las-palmeras",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
     });
     expect(load).toHaveBeenCalledOnce();
+  });
+
+  it("reuses an Apify-backed paid checkpoint after publication interruption", async () => {
+    const repository = new MemoryGenerationRepository();
+    const paidFetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify([
+            {
+              title: "Las Palmeras",
+              categoryName: "Restaurante peruano",
+              address: "Av. Alfredo Benavides 1901, Miraflores",
+              city: "Lima",
+              location: { lat: -12.1211, lng: -77.0297 },
+              url: FIXTURE_MAPS_URL,
+            },
+          ]),
+          { status: 200 },
+        ),
+    );
+    let now = new Date("2026-07-16T10:00:00.000Z");
+    const coordinator = new GenerationCoordinator(
+      repository,
+      new ApifyGoogleMapsProvider("private-token", paidFetch as typeof fetch),
+      () => now,
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+    repository.interruptNextPublication();
+
+    expect(await coordinator.advance(submission.id)).toEqual({
+      kind: "generating",
+      id: submission.id,
+    });
+    now = new Date("2026-07-16T10:02:00.000Z");
+    await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+      kind: "ready",
+    });
+    expect(paidFetch).toHaveBeenCalledOnce();
   });
 
   it("persists only a safe error when a provider fails", async () => {
