@@ -21,6 +21,10 @@ type UrlKind = "full" | "short";
 type IdentityParameter = "place_id" | "ftid" | "cid";
 type PlaceIdentity = readonly ["place_id" | "cid", string];
 
+function identitiesEqual(first: PlaceIdentity, second: PlaceIdentity): boolean {
+  return first[0] === second[0] && first[1] === second[1];
+}
+
 const identityValidators = {
   place_id: (value: string) =>
     /^[A-Za-z0-9_-]+$/.test(value) ? value : undefined,
@@ -56,10 +60,10 @@ function getParameterIdentity(url: URL): PlaceIdentity | undefined {
     }
   }
 
-  for (const q of url.searchParams.getAll("q")) {
-    if (q.startsWith("place_id:")) {
+  for (const queryValue of url.searchParams.getAll("q")) {
+    if (queryValue.startsWith("place_id:")) {
       identities.push(
-        validateIdentity("place_id", q.slice("place_id:".length)),
+        validateIdentity("place_id", queryValue.slice("place_id:".length)),
       );
     }
   }
@@ -73,9 +77,8 @@ function getParameterIdentity(url: URL): PlaceIdentity | undefined {
 
   const identity = identities[0];
   if (
-    identities.some(
-      ([name, value]) => name !== identity?.[0] || value !== identity[1],
-    )
+    identity &&
+    identities.some((candidate) => !identitiesEqual(candidate, identity))
   ) {
     throw new UnsupportedMapsUrlError();
   }
@@ -83,16 +86,16 @@ function getParameterIdentity(url: URL): PlaceIdentity | undefined {
 }
 
 function getPathIdentities(url: URL): PlaceIdentity[] {
-  const data = url.pathname.match(/\/data=([^/]*)\/?$/)?.[1];
-  if (!data) return [];
+  const encodedPathData = url.pathname.match(/\/data=([^/]*)\/?$/)?.[1];
+  if (!encodedPathData) return [];
 
   const identities = [
     ...Array.from(
-      data.matchAll(/!19s([^!/?#]+)/g),
+      encodedPathData.matchAll(/!19s([^!/?#]+)/g),
       (match) => ["place_id", match[1]] as const,
     ),
     ...Array.from(
-      data.matchAll(/!1s([^!/?#]+)/g),
+      encodedPathData.matchAll(/!1s([^!/?#]+)/g),
       (match) => ["ftid", match[1]] as const,
     ),
   ].map(([name, encodedValue]) => {
@@ -108,8 +111,8 @@ function getPathIdentities(url: URL): PlaceIdentity[] {
 
   const uniqueIdentities = identities.filter(
     (identity, index) =>
-      identities.findIndex(
-        ([name, value]) => name === identity[0] && value === identity[1],
+      identities.findIndex((candidate) =>
+        identitiesEqual(candidate, identity),
       ) === index,
   );
   if (
@@ -156,18 +159,28 @@ function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
 
   if (!fullHosts.has(hostname)) throw new UnsupportedMapsUrlError();
 
-  const hasPlacePath =
+  try {
+    decodeURIComponent(url.pathname);
+  } catch {
+    throw new UnsupportedMapsUrlError();
+  }
+
+  const matchesPlacePath =
     /^\/maps\/place\/(?:[^/]+(?:\/@[^/]+)?(?:\/data=[^/]*)?|\/data=[^/]+)\/?$/.test(
       url.pathname,
     );
-  const hasPlaceParameter = getParameterIdentity(url) !== undefined;
+  const pathHasData = url.pathname.includes("/data=");
+  const hasPlacePath =
+    matchesPlacePath && (!pathHasData || getPathIdentities(url).length > 0);
+  const parameterIdentity = getParameterIdentity(url);
+  const hasPlaceParameter = parameterIdentity !== undefined;
   const hasSupportedParameterizedPath =
     /^\/maps\/?$/.test(url.pathname) ||
     /^\/maps\/search\/?$/.test(url.pathname);
   const hasSupportedRootCid =
     hostname === "maps.google.com" &&
     url.pathname === "/" &&
-    getParameterIdentity(url)?.[0] === "cid";
+    parameterIdentity?.[0] === "cid";
 
   if (
     !hasPlacePath &&
@@ -186,9 +199,8 @@ function normalizeFullUrl(url: URL): string {
   if (
     parameterIdentity &&
     pathIdentities.length > 0 &&
-    !pathIdentities.some(
-      ([name, value]) =>
-        name === parameterIdentity[0] && value === parameterIdentity[1],
+    !pathIdentities.some((identity) =>
+      identitiesEqual(identity, parameterIdentity),
     )
   ) {
     throw new UnsupportedMapsUrlError();

@@ -149,6 +149,10 @@ describe("Google Maps URL resolution", () => {
     "https://www.google.com/maps?cid=12not-a-cid",
     "https://www.google.com/maps?ftid=0x1234:not-hex",
     "https://www.google.com/maps?place_id=not%20a%20place%20id",
+    "https://www.google.com/maps/place/Cafe%ZZ",
+    "https://www.google.com/maps/place/Cafe/data=",
+    "https://www.google.com/maps/place//data=!19s",
+    "https://www.google.com/maps/place//data=garbage",
     "https://www.google.com/maps/place/Cafe/unsupported/trailing/path",
     "https://www.google.com/?cid=123456789",
     "not a url",
@@ -208,6 +212,22 @@ describe("Google Maps URL resolution", () => {
       new Response(null, {
         status: 302,
         headers: { location: "https://internal.example.test/secret" },
+      }),
+    );
+
+    await expect(
+      resolveGoogleMapsUrl("https://maps.app.goo.gl/first", fetcher),
+    ).rejects.toBeInstanceOf(UnsupportedMapsUrlError);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a malformed place path reached through a short link", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: {
+          location: "https://www.google.com/maps/place//data=garbage",
+        },
       }),
     );
 
