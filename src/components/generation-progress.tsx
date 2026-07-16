@@ -1,0 +1,142 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { PublicGenerationStatus } from "@/domain/generation/public-status";
+import { GENERATION_FAILURE_MESSAGE } from "@/domain/generation/types";
+
+const POLL_INTERVAL_MS = 1_500;
+const DELAYED_AFTER_MS = 30_000;
+const defaultNavigate = (url: string) => window.location.assign(url);
+
+export function GenerationProgress({
+  id,
+  initialStatus,
+  navigate = defaultNavigate,
+}: {
+  id: string;
+  initialStatus: PublicGenerationStatus;
+  navigate?: (url: string) => void;
+}) {
+  const [generation, setGeneration] = useState(initialStatus);
+  const [delayed, setDelayed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    if (
+      retryKey === 0 &&
+      (initialStatus.status === "ready" || initialStatus.status === "failed")
+    )
+      return;
+
+    let active = true;
+    let pollTimer: ReturnType<typeof setTimeout>;
+    const delayedTimer = setTimeout(() => {
+      if (!active) return;
+      active = false;
+      clearTimeout(pollTimer);
+      setDelayed(true);
+    }, DELAYED_AFTER_MS);
+
+    async function request(path: string, init?: RequestInit) {
+      const response = await fetch(path, { ...init, cache: "no-store" });
+      if (!response.ok) throw new Error("Generation request failed");
+      const status: PublicGenerationStatus = await response.json();
+      if (!active) return;
+      setGeneration(status);
+      if (status.status === "ready" && status.slug) {
+        navigate(`/r/${status.slug}`);
+      }
+      if (status.status === "ready" || status.status === "failed") {
+        active = false;
+        clearTimeout(delayedTimer);
+        clearTimeout(pollTimer);
+      }
+    }
+
+    async function poll() {
+      try {
+        await request(`/api/generations/${id}`);
+      } catch {
+        // A transient disconnect is recoverable because status is persisted.
+      } finally {
+        if (active) pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+      }
+    }
+
+    void request(`/api/generations/${id}/progress`, { method: "POST" })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+      });
+
+    return () => {
+      active = false;
+      clearTimeout(delayedTimer);
+      clearTimeout(pollTimer);
+    };
+  }, [id, retryKey, initialStatus.status, navigate]);
+
+  const retry = () => {
+    setDelayed(false);
+    setGeneration({ status: "pending", slug: null, error: null });
+    setRetryKey((value) => value + 1);
+  };
+
+  if (generation.status === "failed") {
+    return (
+      <div className="generation-state" role="alert">
+        <p className="error">{GENERATION_FAILURE_MESSAGE}</p>
+        <div className="generation-actions">
+          <button className="primary-button" onClick={retry} type="button">
+            Try again
+          </button>
+          <Link href="/">Use another link</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (delayed) {
+    return (
+      <output className="generation-state" aria-live="polite">
+        <h2>This is taking longer than usual.</h2>
+        <p>
+          Your progress is saved. You can resume safely now or return later.
+        </p>
+        <div className="generation-actions">
+          <button className="primary-button" onClick={retry} type="button">
+            Resume
+          </button>
+          <Link href="/">Use another link</Link>
+        </div>
+      </output>
+    );
+  }
+
+  return (
+    <output className="generation-state" aria-live="polite">
+      <ol className="progress-stages" aria-label="Generation progress">
+        <li
+          data-active={generation.status === "pending"}
+          aria-current={generation.status === "pending" ? "step" : undefined}
+        >
+          Checking your link
+        </li>
+        <li
+          data-active={generation.status === "generating"}
+          aria-current={generation.status === "generating" ? "step" : undefined}
+        >
+          Building your page
+        </li>
+        <li
+          data-active={generation.status === "ready"}
+          aria-current={generation.status === "ready" ? "step" : undefined}
+        >
+          Opening your site
+        </li>
+      </ol>
+      <p className="keep-open">Keep this page open while we build your site.</p>
+    </output>
+  );
+}

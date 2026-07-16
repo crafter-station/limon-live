@@ -13,7 +13,7 @@ vi.mock("@/server/db/generation-repository", () => ({
 import GenerationPage from "./page";
 
 describe("generation page", () => {
-  it("allows an exhausted generating lease to be advanced after it becomes stale", async () => {
+  it("renders the resumable client progress experience", async () => {
     const id = "00000000-0000-4000-8000-000000000001";
     findById.mockResolvedValue({
       id,
@@ -36,7 +36,8 @@ describe("generation page", () => {
     });
     const html = renderToStaticMarkup(page);
 
-    expect(html).toContain("Build the fixture site");
-    expect(html).toContain(`value="${id}"`);
+    expect(html).toContain("Keep this page open");
+    expect(html).toContain("Building your page");
+    expect(html).toContain("Creating your site");
   });
 });

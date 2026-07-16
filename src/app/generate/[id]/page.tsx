@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { advanceGeneration } from "@/app/actions";
-import { MAX_GENERATION_ATTEMPTS } from "@/domain/generation/types";
+import { GenerationProgress } from "@/components/generation-progress";
+import { toPublicGenerationStatus } from "@/domain/generation/public-status";
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 
 export const metadata: Metadata = {
@@ -31,28 +31,12 @@ export default async function GenerationPage({
         Limon
       </Link>
       <section className="generation-card">
-        <p className="eyebrow">Fixture generation</p>
-        <h1>Your restaurant page is ready to build.</h1>
-        <p>
-          Advance this persisted generation through the local fixture provider.
-          No Google, Apify, Blob, or AI request will be made.
-        </p>
-        {generation.safeError ? (
-          <p className="error" role="alert">
-            {generation.safeError}
-          </p>
-        ) : null}
-        {generation.status === "generating" ||
-        generation.attemptCount < MAX_GENERATION_ATTEMPTS ? (
-          <form action={advanceGeneration}>
-            <input name="id" type="hidden" value={id} />
-            <button className="primary-button" type="submit">
-              Build the fixture site
-            </button>
-          </form>
-        ) : (
-          <Link href="/">Try another link</Link>
-        )}
+        <p className="eyebrow">Creating your site</p>
+        <h1>We’re turning your restaurant into a website.</h1>
+        <GenerationProgress
+          id={id}
+          initialStatus={toPublicGenerationStatus(generation)}
+        />
       </section>
     </main>
   );
