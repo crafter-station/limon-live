@@ -7,10 +7,10 @@ import {
   ApifyGoogleMapsProvider,
   GoogleMapsPreviewProvider,
   LiveRestaurantProvider,
-  PREVIEW_TIMEOUT_MS,
-  UnusableRestaurantError,
   normalizeRestaurant,
+  PREVIEW_TIMEOUT_MS,
   parseGoogleMapsPreview,
+  UnusableRestaurantError,
 } from "./live-provider";
 
 const mapsUrl = "https://www.google.com/maps/place/Cafe+Limon";

@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RestaurantSite } from "@/components/restaurant-site";
-import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
 import { generationRepositoryContract } from "@/test/generation-repository-contract";
+import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
 import { GenerationCoordinator, restaurantSlug } from "./coordinator";
 import {
   FIXTURE_MAPS_URL,
@@ -229,7 +229,8 @@ describe("fixture generation golden path", () => {
       { retain },
     );
     const submission = await coordinator.submit(FIXTURE_MAPS_URL);
-    if (submission.kind !== "generation") throw new Error("Expected generation");
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
 
     await expect(coordinator.advance(submission.id)).rejects.toThrow();
     await expect(coordinator.advance(submission.id)).resolves.toMatchObject({

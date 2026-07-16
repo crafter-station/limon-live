@@ -102,11 +102,12 @@ describe("place photo retention", () => {
       expect(writer).not.toHaveBeenCalled();
     }
 
-    const redirect = vi.fn(async () =>
-      new Response(null, {
-        status: 302,
-        headers: { location: "https://attacker.example/image.jpg" },
-      }),
+    const redirect = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://attacker.example/image.jpg" },
+        }),
     );
     const output = await new PlacePhotoRetainer(
       "token",
@@ -119,9 +120,12 @@ describe("place photo retention", () => {
   it("enforces redirect, timeout, type, declared-size, and streamed-size limits", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     const cases: Array<() => Promise<Response>> = [
-      async () => new Response("html", { headers: { "content-type": "text/html" } }),
       async () =>
-        imageResponse(undefined, { "content-length": String(PHOTO_MAX_BYTES + 1) }),
+        new Response("html", { headers: { "content-type": "text/html" } }),
+      async () =>
+        imageResponse(undefined, {
+          "content-length": String(PHOTO_MAX_BYTES + 1),
+        }),
       async () => imageResponse(new Uint8Array(PHOTO_MAX_BYTES + 1)),
       async () => {
         throw new DOMException("timed out", "TimeoutError");
@@ -137,16 +141,18 @@ describe("place photo retention", () => {
     }
     expect(timeout).toHaveBeenCalledWith(PHOTO_TIMEOUT_MS);
 
-    const redirect = vi.fn(async () =>
-      new Response(null, {
-        status: 302,
-        headers: { location: "https://lh3.googleusercontent.com/again" },
-      }),
+    const redirect = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://lh3.googleusercontent.com/again" },
+        }),
     );
-    await new PlacePhotoRetainer("token", redirect as typeof fetch, vi.fn()).retain(
-      "id",
-      restaurant(["https://lh3.googleusercontent.com/photo"]),
-    );
+    await new PlacePhotoRetainer(
+      "token",
+      redirect as typeof fetch,
+      vi.fn(),
+    ).retain("id", restaurant(["https://lh3.googleusercontent.com/photo"]));
     expect(redirect).toHaveBeenCalledTimes(PHOTO_MAX_REDIRECTS + 1);
     timeout.mockRestore();
   });
@@ -179,7 +185,9 @@ describe("place photo retention", () => {
         "https://lh5.googleusercontent.com/three",
       ]),
     );
-    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(PHOTO_CONCURRENCY));
+    await vi.waitFor(() =>
+      expect(fetcher).toHaveBeenCalledTimes(PHOTO_CONCURRENCY),
+    );
     releases.shift()?.(imageResponse());
     await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
     releases.shift()?.(new Response("bad", { status: 500 }));

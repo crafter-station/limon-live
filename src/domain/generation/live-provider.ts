@@ -1,6 +1,6 @@
 import {
-  normalizedRestaurantSchema,
   type NormalizedRestaurant,
+  normalizedRestaurantSchema,
 } from "@/domain/restaurant";
 import {
   hasSameGoogleMapsPlaceIdentity,

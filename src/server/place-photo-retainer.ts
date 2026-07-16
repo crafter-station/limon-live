@@ -46,13 +46,15 @@ async function downloadPhoto(sourceUrl: string, fetcher: typeof fetch) {
       signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
     });
     if (response.status >= 300 && response.status < 400) {
-      if (redirects >= PHOTO_MAX_REDIRECTS) throw new Error("Too many redirects.");
+      if (redirects >= PHOTO_MAX_REDIRECTS)
+        throw new Error("Too many redirects.");
       const location = response.headers.get("location");
       if (!location) throw new Error("Redirect has no location.");
       url = approvedPhotoUrl(new URL(location, url).href);
       continue;
     }
-    if (!response.ok || !response.body) throw new Error("Photo download failed.");
+    if (!response.ok || !response.body)
+      throw new Error("Photo download failed.");
     const contentType = response.headers
       .get("content-type")
       ?.split(";", 1)[0]

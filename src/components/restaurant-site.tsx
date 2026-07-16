@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { StoredRestaurant } from "@/domain/restaurant";
 
 export function RestaurantSite({
@@ -24,7 +25,13 @@ export function RestaurantSite({
         className={`restaurant-hero ${heroPhoto ? "restaurant-hero-photo" : "restaurant-hero-fallback"}`}
       >
         {heroPhoto ? (
-          <img className="restaurant-hero-image" src={heroPhoto.url} alt={heroPhoto.alt} />
+          <Image
+            className="restaurant-hero-image"
+            src={heroPhoto.url}
+            alt={heroPhoto.alt}
+            fill
+            sizes="100vw"
+          />
         ) : (
           <div className="hero-orbit" aria-hidden="true" />
         )}
@@ -55,8 +62,16 @@ export function RestaurantSite({
           <div className="gallery-grid">
             {restaurant.photos.slice(1).map((photo) => (
               <figure key={photo.url}>
-                <img src={photo.url} alt={photo.alt} loading="lazy" />
-                {photo.attribution ? <figcaption>Foto: {photo.attribution}</figcaption> : null}
+                <Image
+                  src={photo.url}
+                  alt={photo.alt}
+                  width={1200}
+                  height={900}
+                  sizes="(max-width: 800px) 100vw, 50vw"
+                />
+                {photo.attribution ? (
+                  <figcaption>Foto: {photo.attribution}</figcaption>
+                ) : null}
               </figure>
             ))}
           </div>
@@ -76,7 +91,9 @@ export function RestaurantSite({
                 .toLocaleUpperCase("es");
               return (
                 <article key={`${review.author ?? "visitante"}-${index}`}>
-                  <span className="review-initials" aria-hidden="true">{initials}</span>
+                  <span className="review-initials" aria-hidden="true">
+                    {initials}
+                  </span>
                   <p>{review.text}</p>
                   <strong>{review.author ?? "Visitante de Google"}</strong>
                 </article>

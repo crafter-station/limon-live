@@ -8,8 +8,8 @@ import {
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 import { DrizzleRateLimitRepository } from "@/server/db/rate-limit-repository";
 import { getServerEnv } from "@/server/env";
-import { deriveRequesterKey, utcHour } from "@/server/submission-security";
 import { PlacePhotoRetainer } from "@/server/place-photo-retainer";
+import { deriveRequesterKey, utcHour } from "@/server/submission-security";
 
 export const SUBMISSIONS_PER_HOUR = 5;
 
