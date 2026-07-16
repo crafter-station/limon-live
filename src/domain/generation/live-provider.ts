@@ -6,39 +6,23 @@ import { resolveGoogleMapsUrl } from "./maps-url";
 import { foldText } from "./text";
 import type { RestaurantProvider } from "./types";
 
-const EXACT_FOOD_CATEGORIES = new Set([
-  "restaurant",
-  "restaurante",
-  "cafe",
-  "cafeteria",
-  "cafe or coffee shop",
-  "coffee shop",
-  "bakery",
-  "panaderia",
-  "pasteleria",
-  "pizzeria",
-  "bistro",
-  "food court",
-  "heladeria",
-  "ice cream shop",
-  "bar",
-  "pub",
-  "tea house",
-  "dessert shop",
-  "sandwich shop",
-  "food truck",
-  "deli",
-]);
-
-const SPANISH_CATEGORY_NAMES: Record<string, string> = {
+const FOOD_CATEGORY_NAMES: Record<string, string> = {
   restaurant: "restaurante",
+  restaurante: "restaurante",
   "cafe or coffee shop": "café",
   "coffee shop": "cafetería",
   cafe: "café",
+  cafeteria: "cafetería",
   bakery: "panadería",
+  panaderia: "panadería",
+  pasteleria: "pastelería",
+  pizzeria: "pizzería",
   bistro: "bistró",
   "food court": "patio de comidas",
+  heladeria: "heladería",
   "ice cream shop": "heladería",
+  bar: "bar",
+  pub: "pub",
   "tea house": "salón de té",
   "dessert shop": "tienda de postres",
   "sandwich shop": "sandwichería",
@@ -86,10 +70,8 @@ function normalizedCategory(value: string) {
 function isFoodCategory(value: string) {
   const category = normalizedCategory(value);
   return (
-    EXACT_FOOD_CATEGORIES.has(category) ||
-    /^(?:restaurante|cafeteria|panaderia|pasteleria|pizzeria)\b/.test(
-      category,
-    ) ||
+    FOOD_CATEGORY_NAMES[category] !== undefined ||
+    /^restaurante [a-z]+$/.test(category) ||
     /\b(?:restaurant|cafe|bakery|bistro)$/.test(category)
   );
 }
@@ -97,7 +79,7 @@ function isFoodCategory(value: string) {
 function factualDescription(name: string, category: string, city: string) {
   const normalized = normalizedCategory(category);
   const spanishCategory =
-    SPANISH_CATEGORY_NAMES[normalized] ??
+    FOOD_CATEGORY_NAMES[normalized] ??
     (normalized.endsWith(" restaurant") ? "restaurante" : null) ??
     category.toLocaleLowerCase("es");
   return `${name}: ${spanishCategory} en ${city}.`;
@@ -263,6 +245,7 @@ export const APIFY_INPUT = (url: string) => ({
   language: "es",
   maxCrawledPlacesPerSearch: 1,
   maxReviews: 3,
+  reviewsOrigin: "google",
   maxImages: 3,
   scrapeContacts: false,
   scrapeDirectories: false,
@@ -310,9 +293,33 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     } catch {
       throw new UnusableRestaurantError();
     }
-    if (normalizedReturnedUrl !== normalizedSource)
-      throw new UnusableRestaurantError();
-    return normalizeRestaurant(item, "apify-google-maps", normalizedSource);
+    if (normalizedReturnedUrl !== normalizedSource) {
+      let requestedName: string | undefined;
+      let returnedName: string | undefined;
+      try {
+        requestedName = decodeURIComponent(
+          new URL(normalizedSource).pathname.split("/maps/place/")[1] ?? "",
+        );
+        returnedName = decodeURIComponent(
+          new URL(returnedUrl ?? "").pathname.split("/maps/place/")[1] ?? "",
+        );
+      } catch {
+        throw new UnusableRestaurantError();
+      }
+      if (
+        !requestedName ||
+        !returnedName ||
+        normalizedCategory(requestedName.replaceAll("+", " ")) !==
+          normalizedCategory(returnedName.replaceAll("+", " "))
+      ) {
+        throw new UnusableRestaurantError();
+      }
+    }
+    return normalizeRestaurant(
+      item,
+      "apify-google-maps",
+      normalizedReturnedUrl,
+    );
   }
 }
 

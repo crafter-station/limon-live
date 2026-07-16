@@ -94,6 +94,9 @@ describe("live restaurant providers", () => {
       "Sandwich shop equipment",
       "Food truck rental",
       "Deli packaging supplier",
+      "Cafetería equipment supplier",
+      "Panadería alquiler de equipos",
+      "Pastelería proveedor",
     ]) {
       expect(() =>
         normalizeRestaurant(
@@ -230,6 +233,7 @@ describe("live restaurant providers", () => {
       language: "es",
       maxCrawledPlacesPerSearch: 1,
       maxReviews: 3,
+      reviewsOrigin: "google",
       maxImages: 3,
       scrapeContacts: false,
       scrapeDirectories: false,
@@ -258,6 +262,25 @@ describe("live restaurant providers", () => {
     await expect(provider.load(requestedUrl)).resolves.toMatchObject({
       name: "Café Limón",
       mapsUrl: requestedUrl,
+    });
+  });
+
+  it("adopts canonical paid identity for a matching path-only input", async () => {
+    const placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4";
+    const returnedUrl = `${mapsUrl}?query_place_id=${placeId}`;
+    const provider = new ApifyGoogleMapsProvider(
+      "private-token",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify([{ ...place, url: returnedUrl }]), {
+            status: 200,
+          }),
+      ) as typeof fetch,
+    );
+
+    await expect(provider.load(mapsUrl)).resolves.toMatchObject({
+      name: "Café Limón",
+      mapsUrl: `https://www.google.com/maps?place_id=${placeId}`,
     });
   });
 
