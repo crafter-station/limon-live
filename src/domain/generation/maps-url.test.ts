@@ -69,17 +69,39 @@ describe("Google Maps URL resolution", () => {
       `https://www.google.com/maps?place_id=${placeId}`,
     ]);
 
+    const cid = "1311768467294899695";
     await expect(
       Promise.all([
         resolveGoogleMapsUrl(
           `https://www.google.com/maps/place/Cafe/data=!4m2!3m1!1s${ftid}`,
         ),
         resolveGoogleMapsUrl(`https://maps.google.com/maps?ftid=${ftid}`),
+        resolveGoogleMapsUrl(`https://maps.google.com/maps?cid=${cid}`),
       ]),
     ).resolves.toEqual([
-      `https://www.google.com/maps?ftid=${ftid}`,
-      `https://www.google.com/maps?ftid=${ftid}`,
+      `https://www.google.com/maps?cid=${cid}`,
+      `https://www.google.com/maps?cid=${cid}`,
+      `https://www.google.com/maps?cid=${cid}`,
     ]);
+  });
+
+  it.each([
+    `${placeUrl}/data=!4m2!3m1!19sChIJPath?query_place_id=ChIJQuery`,
+    "https://www.google.com/maps?query_place_id=ChIJOne&place_id=ChIJTwo",
+    "https://www.google.com/maps?place_id=ChIJOne&place_id=ChIJTwo",
+    "https://www.google.com/maps?ftid=0x1:0x2&cid=3",
+  ])("rejects conflicting place identities: %s", async (input) => {
+    await expect(resolveGoogleMapsUrl(input)).rejects.toBeInstanceOf(
+      UnsupportedMapsUrlError,
+    );
+  });
+
+  it("accepts equivalent FTID and CID identities across path and query", async () => {
+    await expect(
+      resolveGoogleMapsUrl(
+        "https://www.google.com/maps/place/Cafe/data=!4m2!3m1!1s0x1:0x2?cid=2",
+      ),
+    ).resolves.toBe("https://www.google.com/maps?cid=2");
   });
 
   it("prefers a place ID when a modern data path also contains an FTID", async () => {

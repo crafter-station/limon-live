@@ -18,7 +18,8 @@ export class UnsupportedMapsUrlError extends Error {}
 export class MapsUrlResolutionError extends Error {}
 
 type UrlKind = "full" | "short";
-type PlaceIdentity = readonly ["place_id" | "ftid" | "cid", string];
+type IdentityParameter = "place_id" | "ftid" | "cid";
+type PlaceIdentity = readonly ["place_id" | "cid", string];
 
 const identityValidators = {
   place_id: (value: string) =>
@@ -35,54 +36,75 @@ const identityValidators = {
 } as const;
 
 function validateIdentity(
-  name: PlaceIdentity[0],
+  name: IdentityParameter,
   value: string,
 ): PlaceIdentity {
   const normalized = identityValidators[name](value);
   if (!normalized) throw new UnsupportedMapsUrlError();
+  if (name === "ftid") {
+    return ["cid", BigInt(normalized.split(":")[1]).toString()];
+  }
   return [name, normalized];
 }
 
 function getParameterIdentity(url: URL): PlaceIdentity | undefined {
+  const identities: PlaceIdentity[] = [];
+
   for (const parameter of ["query_place_id", "place_id"] as const) {
-    if (url.searchParams.has(parameter)) {
-      return validateIdentity(
-        "place_id",
-        url.searchParams.get(parameter) ?? "",
+    for (const value of url.searchParams.getAll(parameter)) {
+      identities.push(validateIdentity("place_id", value));
+    }
+  }
+
+  for (const q of url.searchParams.getAll("q")) {
+    if (q.startsWith("place_id:")) {
+      identities.push(
+        validateIdentity("place_id", q.slice("place_id:".length)),
       );
     }
   }
 
-  const q = url.searchParams.get("q");
-  if (q?.startsWith("place_id:")) {
-    return validateIdentity("place_id", q.slice("place_id:".length));
+  for (const ftid of url.searchParams.getAll("ftid")) {
+    identities.push(validateIdentity("ftid", ftid));
+  }
+  for (const cid of url.searchParams.getAll("cid")) {
+    identities.push(validateIdentity("cid", cid));
   }
 
-  if (url.searchParams.has("ftid")) {
-    return validateIdentity("ftid", url.searchParams.get("ftid") ?? "");
+  const identity = identities[0];
+  if (
+    identities.some(
+      ([name, value]) => name !== identity?.[0] || value !== identity[1],
+    )
+  ) {
+    throw new UnsupportedMapsUrlError();
   }
-  if (url.searchParams.has("cid")) {
-    return validateIdentity("cid", url.searchParams.get("cid") ?? "");
-  }
+  return identity;
 }
 
-function getPathIdentity(url: URL): PlaceIdentity | undefined {
+function getPathIdentities(url: URL): PlaceIdentity[] {
   const data = url.pathname.match(/\/data=([^/]*)\/?$/)?.[1];
-  if (!data) return undefined;
+  if (!data) return [];
 
   const placeIdMatch = data.match(/!19s([^!/?#]+)/);
   const ftidMatch = data.match(/!1s([^!/?#]+)/);
-  const match = placeIdMatch ?? ftidMatch;
-  if (!match) return undefined;
+  const matches = [placeIdMatch, ftidMatch].filter(
+    (match): match is RegExpMatchArray => match !== null,
+  );
 
-  let value: string;
-  try {
-    value = decodeURIComponent(match[1]);
-  } catch {
-    throw new UnsupportedMapsUrlError();
-  }
+  return matches.map((match) => {
+    let value: string;
+    try {
+      value = decodeURIComponent(match[1]);
+    } catch {
+      throw new UnsupportedMapsUrlError();
+    }
 
-  return validateIdentity(placeIdMatch ? "place_id" : "ftid", value);
+    return validateIdentity(
+      match === placeIdMatch ? "place_id" : "ftid",
+      value,
+    );
+  });
 }
 
 function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
@@ -142,14 +164,24 @@ function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
 
 function normalizeFullUrl(url: URL): string {
   const parameterIdentity = getParameterIdentity(url);
-  const identity = parameterIdentity ?? getPathIdentity(url);
+  const pathIdentities = getPathIdentities(url);
+  if (
+    parameterIdentity &&
+    pathIdentities.length > 0 &&
+    !pathIdentities.some(
+      ([name, value]) =>
+        name === parameterIdentity[0] && value === parameterIdentity[1],
+    )
+  ) {
+    throw new UnsupportedMapsUrlError();
+  }
+  const identity = pathIdentities[0] ?? parameterIdentity;
 
   if (identity) {
     const [name, value] = identity;
     const identityUrl = new URL("https://www.google.com/maps");
     identityUrl.searchParams.set(name, value);
-    const normalized = identityUrl.toString();
-    return name === "ftid" ? normalized.replace("%3A", ":") : normalized;
+    return identityUrl.toString();
   }
 
   const normalized = new URL(url);
