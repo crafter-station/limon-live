@@ -8,7 +8,10 @@ export const normalizedRestaurantSchema = z.object({
   city: z.string().min(1),
   phone: z.string().min(1).nullable(),
   website: z.url().nullable(),
-  location: z.object({ lat: z.number(), lng: z.number() }),
+  location: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+  }),
   hours: z.array(z.object({ day: z.string(), hours: z.string() })),
   rating: z.number().min(0).max(5).nullable(),
   reviewCount: z.number().int().nonnegative().nullable(),

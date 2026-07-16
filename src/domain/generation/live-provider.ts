@@ -19,8 +19,31 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 function factualDescription(name: string, category: string, city: string) {
-  return `${name} es un ${category.toLocaleLowerCase("es")} ubicado en ${city}.`;
+  return `${name}: ${category.toLocaleLowerCase("es")} en ${city}.`;
+}
+
+function agrees(left: string, right: string) {
+  return left.localeCompare(right, undefined, { sensitivity: "base" }) === 0;
+}
+
+function isSameVenue(
+  baseline: NormalizedRestaurant,
+  enriched: NormalizedRestaurant,
+) {
+  if (!agrees(baseline.name, enriched.name)) return false;
+
+  const addressAgrees =
+    agrees(baseline.address, enriched.address) &&
+    agrees(baseline.city, enriched.city);
+  const coordinatesAgree =
+    Math.abs(baseline.location.lat - enriched.location.lat) <= 0.001 &&
+    Math.abs(baseline.location.lng - enriched.location.lng) <= 0.001;
+  return addressAgrees || coordinatesAgree;
 }
 
 export function normalizeRestaurant(
@@ -44,7 +67,11 @@ export function normalizeRestaurant(
     !city ||
     !FOOD_CATEGORIES.test(category) ||
     !Number.isFinite(lat) ||
-    !Number.isFinite(lng)
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
   ) {
     throw new UnusableRestaurantError();
   }
@@ -70,18 +97,9 @@ export function normalizeRestaurant(
       const hours = text(item.hours);
       return day && hours ? [{ day, hours }] : [];
     }),
-    rating:
-      typeof value.totalScore === "number"
-        ? value.totalScore
-        : typeof value.ratingValue === "number"
-          ? value.ratingValue
-          : null,
+    rating: finiteNumber(value.totalScore) ?? finiteNumber(value.ratingValue),
     reviewCount:
-      typeof value.reviewsCount === "number"
-        ? value.reviewsCount
-        : typeof value.reviewCount === "number"
-          ? value.reviewCount
-          : null,
+      finiteNumber(value.reviewsCount) ?? finiteNumber(value.reviewCount),
     reviews: rawReviews.flatMap((entry) => {
       const item = entry as ProviderRecord;
       const reviewText = text(item.text ?? item.reviewBody);
@@ -142,11 +160,13 @@ export function parseGoogleMapsPreview(html: string): ProviderRecord {
   throw new UnusableRestaurantError();
 }
 
+export const PREVIEW_TIMEOUT_MS = 8_000;
+
 export class GoogleMapsPreviewProvider implements RestaurantProvider {
   constructor(private readonly fetcher: typeof fetch = fetch) {}
   async load(normalizedSource: string) {
     const response = await this.fetcher(normalizedSource, {
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(PREVIEW_TIMEOUT_MS),
       headers: { "accept-language": "es" },
     });
     if (!response.ok) throw new UnusableRestaurantError();
@@ -159,6 +179,8 @@ export class GoogleMapsPreviewProvider implements RestaurantProvider {
 }
 
 export const APIFY_ACTOR = "compass~crawler-google-places";
+export const APIFY_ACTOR_TIMEOUT_SECONDS = 40;
+export const APIFY_CLIENT_TIMEOUT_MS = 45_000;
 export const APIFY_INPUT = (url: string) => ({
   startUrls: [{ url }],
   language: "es",
@@ -180,10 +202,10 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     private readonly fetcher: typeof fetch = fetch,
   ) {}
   async load(normalizedSource: string) {
-    const endpoint = `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?timeout=40&maxItems=1&maxTotalChargeUsd=0.5`;
+    const endpoint = `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?timeout=${APIFY_ACTOR_TIMEOUT_SECONDS}&maxItems=1&maxTotalChargeUsd=0.5`;
     const response = await this.fetcher(endpoint, {
       method: "POST",
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(APIFY_CLIENT_TIMEOUT_MS),
       headers: {
         authorization: `Bearer ${this.token}`,
         "content-type": "application/json",
@@ -215,12 +237,7 @@ export class LiveRestaurantProvider implements RestaurantProvider {
     if (this.enrichment) {
       try {
         const enriched = await this.enrichment.load(normalizedSource);
-        if (
-          !baseline ||
-          enriched.name.localeCompare(baseline.name, undefined, {
-            sensitivity: "base",
-          }) === 0
-        ) {
+        if (!baseline || isSameVenue(baseline, enriched)) {
           return enriched;
         }
       } catch {}

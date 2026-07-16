@@ -14,10 +14,10 @@ as a degraded baseline and Apify enrichment when configured.
 
 The current `compass/crawler-google-places` input and dataset contracts were
 verified against the actor's published schema on 2026-07-16. A paid run is
-bounded to one place, Spanish, three reviews, three images, 60 seconds, and USD
-0.50. Contacts, directories, image-author and review-personal-data scraping, and
-competitor analysis are disabled. The Apify token is sent only in the
-authorization header.
+bounded to one place, Spanish, three reviews, three images, a 40-second actor
+timeout, a 45-second client timeout, and USD 0.50. Contacts, directories,
+image-author and review-personal-data scraping, and competitor analysis are
+disabled. The Apify token is sent only in the authorization header.
 
 Live debugging is an explicitly paid path. Automated tests use representative
 preview and Apify fixtures and never invoke the actor.

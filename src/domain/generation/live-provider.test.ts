@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  APIFY_ACTOR_TIMEOUT_SECONDS,
+  APIFY_CLIENT_TIMEOUT_MS,
   APIFY_INPUT,
   ApifyGoogleMapsProvider,
+  GoogleMapsPreviewProvider,
   LiveRestaurantProvider,
+  PREVIEW_TIMEOUT_MS,
   UnusableRestaurantError,
   normalizeRestaurant,
   parseGoogleMapsPreview,
 } from "./live-provider";
 
 const mapsUrl = "https://www.google.com/maps/place/Cafe+Limon";
+const previewHtml = `<script type="application/ld+json">${JSON.stringify({ "@type": "Restaurant", name: "Casa Sol", servesCuisine: "Restaurante peruano", address: { streetAddress: "Av. Sol 4", addressLocality: "Cusco" }, geo: { latitude: -13.52, longitude: -71.97 } })}</script>`;
 const place = {
   title: "Café Limón",
   categoryName: "Café",
@@ -32,7 +37,7 @@ describe("live restaurant providers", () => {
     );
     expect(restaurant).toMatchObject({
       name: "Café Limón",
-      description: "Café Limón es un café ubicado en Lima.",
+      description: "Café Limón: café en Lima.",
       location: { lat: -12.12, lng: -77.03 },
       attribution: "Google Maps",
       diagnostics: { warnings: ["description-generated"] },
@@ -55,11 +60,22 @@ describe("live restaurant providers", () => {
         mapsUrl,
       ),
     ).toThrow(UnusableRestaurantError);
+    for (const location of [
+      { lat: 91, lng: -77.03 },
+      { lat: -12.12, lng: 181 },
+    ]) {
+      expect(() =>
+        normalizeRestaurant(
+          { ...place, location },
+          "apify-google-maps",
+          mapsUrl,
+        ),
+      ).toThrow(UnusableRestaurantError);
+    }
   });
 
   it("isolates parsing of a realistic public preview", () => {
-    const html = `<script type="application/ld+json">${JSON.stringify({ "@type": "Restaurant", name: "Casa Sol", servesCuisine: "Restaurante peruano", address: { streetAddress: "Av. Sol 4", addressLocality: "Cusco" }, geo: { latitude: -13.52, longitude: -71.97 } })}</script>`;
-    expect(parseGoogleMapsPreview(html)).toMatchObject({
+    expect(parseGoogleMapsPreview(previewHtml)).toMatchObject({
       name: "Casa Sol",
       addressLocality: "Cusco",
     });
@@ -68,7 +84,38 @@ describe("live restaurant providers", () => {
     );
   });
 
+  it("loads and normalizes the public preview with bounded Spanish requests", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const fetcher = vi.fn(
+      async () => new Response(previewHtml, { status: 200 }),
+    );
+    await expect(
+      new GoogleMapsPreviewProvider(fetcher as typeof fetch).load(mapsUrl),
+    ).resolves.toMatchObject({ name: "Casa Sol", city: "Cusco" });
+    expect(fetcher).toHaveBeenCalledWith(
+      mapsUrl,
+      expect.objectContaining({ headers: { "accept-language": "es" } }),
+    );
+    expect(timeout).toHaveBeenCalledWith(PREVIEW_TIMEOUT_MS);
+    timeout.mockRestore();
+  });
+
+  it("rejects malformed and non-OK preview responses", async () => {
+    for (const response of [
+      new Response("<html></html>", { status: 200 }),
+      new Response("unavailable", { status: 503 }),
+    ]) {
+      const provider = new GoogleMapsPreviewProvider(
+        vi.fn(async () => response) as typeof fetch,
+      );
+      await expect(provider.load(mapsUrl)).rejects.toThrow(
+        UnusableRestaurantError,
+      );
+    }
+  });
+
   it("bounds paid requests and keeps credentials out of URLs", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
     const fetcher = vi.fn(
       async () => new Response(JSON.stringify([place]), { status: 200 }),
     );
@@ -80,7 +127,9 @@ describe("live restaurant providers", () => {
       string,
       RequestInit & { headers: Record<string, string>; body: string },
     ];
-    expect(url).toContain("maxItems=1&maxTotalChargeUsd=0.5");
+    expect(url).toContain(
+      `timeout=${APIFY_ACTOR_TIMEOUT_SECONDS}&maxItems=1&maxTotalChargeUsd=0.5`,
+    );
     expect(url).not.toContain("private-token");
     expect(init.headers.authorization).toBe("Bearer private-token");
     expect(JSON.parse(init.body)).toEqual(APIFY_INPUT(mapsUrl));
@@ -91,9 +140,22 @@ describe("live restaurant providers", () => {
       maxImages: 3,
       scrapeContacts: false,
       scrapeDirectories: false,
+      scrapeImageAuthors: false,
       enableCompetitorAnalysis: false,
       scrapeReviewsPersonalData: false,
     });
+    expect(timeout).toHaveBeenCalledWith(APIFY_CLIENT_TIMEOUT_MS);
+    timeout.mockRestore();
+  });
+
+  it("creates category-neutral factual copy", () => {
+    expect(
+      normalizeRestaurant(
+        { ...place, title: "Pan del Sol", categoryName: "Panadería" },
+        "apify-google-maps",
+        mapsUrl,
+      ).description,
+    ).toBe("Pan del Sol: panadería en Lima.");
   });
 
   it("falls back to baseline and fails when both sources are unusable", async () => {
@@ -117,6 +179,22 @@ describe("live restaurant providers", () => {
       new LiveRestaurantProvider(
         { load: async () => baseline },
         { load: async () => conflict },
+      ).load(mapsUrl),
+    ).resolves.toEqual(baseline);
+    const sameNameDifferentVenue = normalizeRestaurant(
+      {
+        ...place,
+        address: "Calle Norte 99, Barranco",
+        city: "Barranco",
+        location: { lat: -12.15, lng: -77.02 },
+      },
+      "apify-google-maps",
+      mapsUrl,
+    );
+    await expect(
+      new LiveRestaurantProvider(
+        { load: async () => baseline },
+        { load: async () => sameNameDifferentVenue },
       ).load(mapsUrl),
     ).resolves.toEqual(baseline);
     await expect(
