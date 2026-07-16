@@ -1,6 +1,10 @@
 import "server-only";
 import { GenerationCoordinator } from "@/domain/generation/coordinator";
-import { FixtureRestaurantProvider } from "@/domain/generation/fixture-provider";
+import {
+  ApifyGoogleMapsProvider,
+  GoogleMapsPreviewProvider,
+  LiveRestaurantProvider,
+} from "@/domain/generation/live-provider";
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 import { DrizzleRateLimitRepository } from "@/server/db/rate-limit-repository";
 import { getServerEnv } from "@/server/env";
@@ -9,9 +13,13 @@ import { deriveRequesterKey, utcHour } from "@/server/submission-security";
 export const SUBMISSIONS_PER_HOUR = 5;
 
 export function createGenerationCoordinator() {
+  const env = getServerEnv();
   return new GenerationCoordinator(
     new DrizzleGenerationRepository(),
-    new FixtureRestaurantProvider(),
+    new LiveRestaurantProvider(
+      new GoogleMapsPreviewProvider(),
+      new ApifyGoogleMapsProvider(env.APIFY_PERSONAL_API_TOKEN),
+    ),
   );
 }
 

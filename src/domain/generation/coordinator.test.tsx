@@ -74,10 +74,10 @@ describe("fixture generation golden path", () => {
     const result = await coordinator.advance(submission.id);
     const persisted = await repository.findById(submission.id);
 
-    expect(result).toEqual({ kind: "ready", slug: "las-palmeras" });
+    expect(result).toEqual({ kind: "ready", slug: "restaurante-las-palmeras" });
     expect(persisted).toMatchObject({
       status: "ready",
-      slug: "las-palmeras",
+      slug: "restaurante-las-palmeras",
       attemptCount: 1,
       providerCheckpoint: { name: "Restaurante Las Palmeras" },
       publishedData: { city: "Lima" },
@@ -106,7 +106,10 @@ describe("fixture generation golden path", () => {
 
     const duplicate = await coordinator.submit(`${FIXTURE_MAPS_URL}#reviews`);
 
-    expect(duplicate).toEqual({ kind: "ready", slug: "las-palmeras" });
+    expect(duplicate).toEqual({
+      kind: "ready",
+      slug: "restaurante-las-palmeras",
+    });
     expect(load).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -133,7 +136,7 @@ describe("fixture generation golden path", () => {
     now = new Date("2026-07-16T10:02:00.000Z");
     expect(await coordinator.advance(submission.id)).toEqual({
       kind: "ready",
-      slug: "las-palmeras",
+      slug: "restaurante-las-palmeras",
     });
     expect(load).toHaveBeenCalledOnce();
   });

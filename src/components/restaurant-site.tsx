@@ -55,6 +55,7 @@ export function RestaurantSite({
       </section>
       <footer className="restaurant-footer">
         <p>Información importada el {importedDate}.</p>
+        <p>Fuente: {restaurant.attribution}.</p>
         <p>
           Sitio generado automáticamente por Limon con información pública. No
           verificado por el restaurante.

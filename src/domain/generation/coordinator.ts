@@ -92,7 +92,12 @@ export class GenerationCoordinator {
       const published = await this.repository.publish(
         id,
         leaseToken,
-        "las-palmeras",
+        data.name
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, ""),
         data,
         this.now(),
       );
