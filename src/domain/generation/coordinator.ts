@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { normalizedRestaurantSchema } from "@/domain/restaurant";
 import { resolveGoogleMapsUrl } from "./maps-url";
 import {
@@ -9,6 +9,20 @@ import {
 } from "./types";
 
 const LEASE_DURATION_MS = 60_000;
+
+export function restaurantSlug(name: string, normalizedSource: string) {
+  const readable = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  const venueId = createHash("sha256")
+    .update(normalizedSource)
+    .digest("hex")
+    .slice(0, 10);
+  return `${readable || "restaurante"}-${venueId}`;
+}
 
 export type SubmissionResult =
   | { kind: "generation"; id: string }
@@ -92,12 +106,7 @@ export class GenerationCoordinator {
       const published = await this.repository.publish(
         id,
         leaseToken,
-        data.name
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, ""),
+        restaurantSlug(data.name, claimed.normalizedSource),
         data,
         this.now(),
       );

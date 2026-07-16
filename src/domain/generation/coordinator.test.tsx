@@ -3,13 +3,24 @@ import { describe, expect, it, vi } from "vitest";
 import { RestaurantSite } from "@/components/restaurant-site";
 import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
 import { generationRepositoryContract } from "@/test/generation-repository-contract";
-import { GenerationCoordinator } from "./coordinator";
+import { GenerationCoordinator, restaurantSlug } from "./coordinator";
 import {
   FIXTURE_MAPS_URL,
   FixtureRestaurantProvider,
 } from "./fixture-provider";
 
 describe("fixture generation golden path", () => {
+  it("creates stable, non-empty, venue-specific slugs", () => {
+    expect(
+      restaurantSlug("東京食堂", "https://maps.google.com/place/one"),
+    ).toMatch(/^restaurante-[a-f0-9]{10}$/);
+    expect(
+      restaurantSlug("Casa Sol", "https://maps.google.com/place/one"),
+    ).not.toBe(restaurantSlug("Casa Sol", "https://maps.google.com/place/two"));
+    expect(
+      restaurantSlug("Casa Sol", "https://maps.google.com/place/one"),
+    ).toBe(restaurantSlug("Casa Sol", "https://maps.google.com/place/one"));
+  });
   it("persists and reuses equivalent pending submissions", async () => {
     const repository = new MemoryGenerationRepository();
     const coordinator = new GenerationCoordinator(
@@ -74,10 +85,13 @@ describe("fixture generation golden path", () => {
     const result = await coordinator.advance(submission.id);
     const persisted = await repository.findById(submission.id);
 
-    expect(result).toEqual({ kind: "ready", slug: "restaurante-las-palmeras" });
+    expect(result).toEqual({
+      kind: "ready",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
+    });
     expect(persisted).toMatchObject({
       status: "ready",
-      slug: "restaurante-las-palmeras",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
       attemptCount: 1,
       providerCheckpoint: { name: "Restaurante Las Palmeras" },
       publishedData: { city: "Lima" },
@@ -108,7 +122,7 @@ describe("fixture generation golden path", () => {
 
     expect(duplicate).toEqual({
       kind: "ready",
-      slug: "restaurante-las-palmeras",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
     });
     expect(load).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
@@ -136,7 +150,7 @@ describe("fixture generation golden path", () => {
     now = new Date("2026-07-16T10:02:00.000Z");
     expect(await coordinator.advance(submission.id)).toEqual({
       kind: "ready",
-      slug: "restaurante-las-palmeras",
+      slug: restaurantSlug("Restaurante Las Palmeras", FIXTURE_MAPS_URL),
     });
     expect(load).toHaveBeenCalledOnce();
   });
