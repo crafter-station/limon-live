@@ -1,10 +1,8 @@
 # Limon
 
 Limon turns a supported full or shortened Google Maps place link into a
-persisted Spanish restaurant page. The current enrichment step deliberately
-uses a local Las Palmeras fixture provider: submission and duplicate handling
-are production-shaped without adding paid Google, Apify, Vercel Blob, or AI
-calls yet.
+persisted Spanish restaurant page. Production import uses a public Maps preview
+as a degraded baseline and Apify enrichment when configured.
 
 ## Setup
 
@@ -12,8 +10,16 @@ calls yet.
 2. Copy the four names from `.env.example` into `.env.local` and provide values.
 3. Apply the checked-in migration with `bun run db:migrate`.
 4. Start Next.js with `bun run dev`.
-5. Click the Las Palmeras example, submit its URL, advance the generation, and
-   open the resulting `/r/las-palmeras` page.
+5. Submit a supported Google Maps place URL and advance the generation.
+
+The current `compass/crawler-google-places` input and dataset contracts were
+verified against the actor's published schema on 2026-07-16. A paid run is
+bounded to one place, Spanish, three reviews, three images, 60 seconds, and USD
+0.02. Contacts, directories, image-author scraping, and competitor analysis are
+disabled. The Apify token is sent only in the authorization header.
+
+Live debugging is an explicitly paid path. Automated tests use representative
+preview and Apify fixtures and never invoke the actor.
 
 The exact server-only environment contract is:
 
@@ -22,9 +28,8 @@ The exact server-only environment contract is:
 - `BLOB_READ_WRITE_TOKEN`
 - `AI_GATEWAY_API_KEY`
 
-Only `DATABASE_URL` is used by this fixture slice. All four are validated
-together at the server boundary because later provider work must not expand or
-leak the contract. No variable is prefixed with `NEXT_PUBLIC_`.
+All four are validated together at the server boundary. No variable is prefixed
+with `NEXT_PUBLIC_`.
 
 ## Commands
 
@@ -47,7 +52,7 @@ leak the contract. No variable is prefixed with `NEXT_PUBLIC_`.
 The landing Server Action validates and normalizes supported Google Maps place
 URLs, manually follows bounded short-link redirects, and atomically creates or
 reuses a `restaurant_generations` row. The generation coordinator
-claims that row with a fenced lease, asks the injected fixture provider for a
+claims that row with a fenced lease, asks the injected live provider for a
 normalized restaurant, checkpoints that data, then publishes the same data and
 a stable slug. The restaurant route reads only the ready row's stored JSON; it
 does not import or call a provider.
@@ -68,11 +73,8 @@ Automated tests exercise the coordinator through persisted state transitions
 and rendered Spanish output. Test setup replaces global `fetch` with a function
 that throws, so adding an accidental paid network call fails the suite.
 
-## Fixture Limitations
+## Limitations
 
-- General supported Maps place URLs can create generation records, but only the
-  documented Las Palmeras place has fixture enrichment until live providers are
-  added.
 - Published pages are immutable and excluded from indexing.
 - Public source information may be incomplete or outdated and is not verified
   by the restaurant.

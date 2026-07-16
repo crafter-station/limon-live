@@ -14,9 +14,16 @@ const fixtureRestaurant: NormalizedRestaurant = {
   address: "Av. Alfredo Benavides 1901, Miraflores",
   city: "Lima",
   phone: "+51 1 445 6789",
+  website: null,
+  location: { lat: -12.1211, lng: -77.0297 },
+  hours: [],
   rating: 4.6,
   reviewCount: 328,
+  reviews: [],
+  attribution: "Google Maps",
   mapsUrl: FIXTURE_MAPS_URL,
+  source: "google-maps-preview",
+  diagnostics: { provider: "fixture", warnings: [] },
   importedAt: "2026-07-16T00:00:00.000Z",
 };
 
