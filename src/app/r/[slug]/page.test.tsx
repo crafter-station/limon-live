@@ -69,6 +69,7 @@ describe("published restaurant page", () => {
     expect(html).toContain("No verificado por el restaurante");
     expect(html).not.toContain("Llamar");
     expect(html).not.toContain("reseñas");
+    expect(html).toContain("restaurant-hero-fallback");
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 
@@ -95,5 +96,51 @@ describe("published restaurant page", () => {
 
     expect(html).toContain("Café Antiguo");
     expect(html).toContain("Fuente: Google Maps");
+    expect(html).toContain("restaurant-hero-fallback");
+  });
+
+  it("renders retained place photos, attribution, and initials without reviewer imagery", async () => {
+    const data = await new FixtureRestaurantProvider().load(
+      FIXTURE_NORMALIZED_SOURCE,
+    );
+    findReadyBySlug.mockResolvedValue({
+      publishedData: {
+        ...data,
+        photos: [
+          {
+            url: "https://store.public.blob.vercel-storage.com/hero.jpg",
+            alt: "Fachada de Restaurante Las Palmeras",
+            attribution: "María P.",
+          },
+          {
+            url: "https://store.public.blob.vercel-storage.com/dining.jpg",
+            alt: "Comedor de Restaurante Las Palmeras",
+            attribution: "Google Maps",
+          },
+        ],
+        reviews: [
+          {
+            author: "Ana Pérez",
+            text: "Excelente comida.",
+            rating: 5,
+            profilePhotoUrl: "https://lh3.googleusercontent.com/avatar",
+          },
+        ],
+      },
+    });
+
+    const page = await PublishedRestaurantPage({
+      params: Promise.resolve({ slug: "las-palmeras" }),
+    });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("restaurant-hero-photo");
+    expect(html).toContain("Fachada de Restaurante Las Palmeras");
+    expect(html).toContain("Comedor de Restaurante Las Palmeras");
+    expect(html).toContain("Foto: María P.");
+    expect(html).toContain("Foto: Google Maps");
+    expect(html).toContain("review-initials");
+    expect(html).toContain("AP");
+    expect(html).not.toContain("googleusercontent.com/avatar");
   });
 });

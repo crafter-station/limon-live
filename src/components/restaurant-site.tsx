@@ -10,6 +10,7 @@ export function RestaurantSite({
     dateStyle: "long",
     timeZone: "America/Lima",
   }).format(new Date(restaurant.importedAt));
+  const heroPhoto = restaurant.photos[0];
 
   return (
     <main className="restaurant-page" lang="es">
@@ -19,8 +20,14 @@ export function RestaurantSite({
         </Link>
         <a href={restaurant.mapsUrl}>Cómo llegar</a>
       </nav>
-      <header className="restaurant-hero">
-        <div className="hero-orbit" aria-hidden="true" />
+      <header
+        className={`restaurant-hero ${heroPhoto ? "restaurant-hero-photo" : "restaurant-hero-fallback"}`}
+      >
+        {heroPhoto ? (
+          <img className="restaurant-hero-image" src={heroPhoto.url} alt={heroPhoto.alt} />
+        ) : (
+          <div className="hero-orbit" aria-hidden="true" />
+        )}
         <div className="restaurant-hero-copy">
           <p className="eyebrow">{restaurant.category}</p>
           <h1>{restaurant.name}</h1>
@@ -37,7 +44,47 @@ export function RestaurantSite({
             <span>{restaurant.city}</span>
           </div>
         </div>
+        {heroPhoto?.attribution ? (
+          <p className="hero-attribution">Foto: {heroPhoto.attribution}</p>
+        ) : null}
       </header>
+      {restaurant.photos.length > 1 ? (
+        <section className="restaurant-gallery" aria-labelledby="gallery-title">
+          <p className="eyebrow">Galería</p>
+          <h2 id="gallery-title">Una mirada al lugar</h2>
+          <div className="gallery-grid">
+            {restaurant.photos.slice(1).map((photo) => (
+              <figure key={photo.url}>
+                <img src={photo.url} alt={photo.alt} loading="lazy" />
+                {photo.attribution ? <figcaption>Foto: {photo.attribution}</figcaption> : null}
+              </figure>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {restaurant.reviews.length ? (
+        <section className="reviews-section" aria-labelledby="reviews-title">
+          <p className="eyebrow">Reseñas</p>
+          <h2 id="reviews-title">Lo que dicen en Google</h2>
+          <div className="review-grid">
+            {restaurant.reviews.map((review, index) => {
+              const initials = (review.author ?? "Visitante")
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((part) => part[0])
+                .join("")
+                .toLocaleUpperCase("es");
+              return (
+                <article key={`${review.author ?? "visitante"}-${index}`}>
+                  <span className="review-initials" aria-hidden="true">{initials}</span>
+                  <p>{review.text}</p>
+                  <strong>{review.author ?? "Visitante de Google"}</strong>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
       <section className="visit-section">
         <div>
           <p className="eyebrow">Visítanos</p>
