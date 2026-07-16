@@ -51,6 +51,43 @@ describe("Google Maps URL resolution", () => {
     );
   });
 
+  it("canonicalizes place IDs and FTIDs from modern Maps data paths", async () => {
+    const placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4";
+    const ftid = "0x9105c8b6f1a2b3c4:0x1234567890abcdef";
+
+    await expect(
+      Promise.all([
+        resolveGoogleMapsUrl(
+          `https://www.google.com/maps/place/Cafe/data=!4m2!3m1!19s${placeId}`,
+        ),
+        resolveGoogleMapsUrl(
+          `https://maps.google.com/maps?query_place_id=${placeId}`,
+        ),
+      ]),
+    ).resolves.toEqual([
+      `https://www.google.com/maps?place_id=${placeId}`,
+      `https://www.google.com/maps?place_id=${placeId}`,
+    ]);
+
+    await expect(
+      Promise.all([
+        resolveGoogleMapsUrl(
+          `https://www.google.com/maps/place/Cafe/data=!4m2!3m1!1s${ftid}`,
+        ),
+        resolveGoogleMapsUrl(`https://maps.google.com/maps?ftid=${ftid}`),
+      ]),
+    ).resolves.toEqual([
+      `https://www.google.com/maps?ftid=${ftid}`,
+      `https://www.google.com/maps?ftid=${ftid}`,
+    ]);
+  });
+
+  it("supports the genuine root CID form and canonicalizes it", async () => {
+    await expect(
+      resolveGoogleMapsUrl("https://maps.google.com/?cid=12345678901234567890"),
+    ).resolves.toBe("https://www.google.com/maps?cid=12345678901234567890");
+  });
+
   it.each([
     "http://www.google.com/maps/place/Cafe",
     "https://google.com.evil.test/maps/place/Cafe",
@@ -61,6 +98,11 @@ describe("Google Maps URL resolution", () => {
     "https://www.google.com/maps?cid=",
     "https://www.google.com/maps?q=place_id:",
     "https://www.google.com/maps?query_place_id=%20",
+    "https://www.google.com/maps?cid=12not-a-cid",
+    "https://www.google.com/maps?ftid=0x1234:not-hex",
+    "https://www.google.com/maps?place_id=not%20a%20place%20id",
+    "https://www.google.com/maps/place/Cafe/unsupported/trailing/path",
+    "https://www.google.com/?cid=123456789",
     "not a url",
   ])("rejects unsafe or unsupported input: %s", async (input) => {
     await expect(resolveGoogleMapsUrl(input)).rejects.toBeInstanceOf(
