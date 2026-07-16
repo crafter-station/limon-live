@@ -89,6 +89,20 @@ Automated tests exercise the coordinator through persisted state transitions
 and rendered Spanish output. Test setup replaces global `fetch` with a function
 that throws, so adding an accidental paid network call fails the suite.
 
+### Live provider boundary
+
+The preview adapter, paid adapter, normalization policy, and reconciliation
+remain one internal module by design. A repository search after the issue #5
+trust fixes finds provider-class references in production only in
+`live-provider.ts` and the single composition root in `generation-service.ts`;
+there is no independently consumed adapter contract. The 12 issue-branch
+commits that touched the module all changed this same fail-closed import
+boundary, while the normalized model and coordinator remain separate modules.
+Splitting the 334-line implementation now would expose seams without an
+independent change driver. Extract an adapter when a second production consumer
+appears, or when one transport acquires an independently tested lifecycle or
+release cadence; keep `LiveRestaurantProvider` as the reconciliation boundary.
+
 ## Limitations
 
 - Published pages are immutable and excluded from indexing.
