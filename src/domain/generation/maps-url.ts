@@ -70,17 +70,19 @@ function getPathIdentity(url: URL): PlaceIdentity | undefined {
   const data = url.pathname.match(/\/data=([^/]*)\/?$/)?.[1];
   if (!data) return undefined;
 
-  const match = data.match(/!(19s|1s)([^!/?#]+)/);
+  const placeIdMatch = data.match(/!19s([^!/?#]+)/);
+  const ftidMatch = data.match(/!1s([^!/?#]+)/);
+  const match = placeIdMatch ?? ftidMatch;
   if (!match) return undefined;
 
   let value: string;
   try {
-    value = decodeURIComponent(match[2]);
+    value = decodeURIComponent(match[1]);
   } catch {
     throw new UnsupportedMapsUrlError();
   }
 
-  return validateIdentity(match[1] === "19s" ? "place_id" : "ftid", value);
+  return validateIdentity(placeIdMatch ? "place_id" : "ftid", value);
 }
 
 function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {

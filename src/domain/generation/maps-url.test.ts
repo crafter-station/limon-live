@@ -82,6 +82,17 @@ describe("Google Maps URL resolution", () => {
     ]);
   });
 
+  it("prefers a place ID when a modern data path also contains an FTID", async () => {
+    const placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4";
+    const ftid = "0x9105c8b6f1a2b3c4:0x1234567890abcdef";
+
+    await expect(
+      resolveGoogleMapsUrl(
+        `https://www.google.com/maps/place/Cafe/data=!4m6!3m5!1s${ftid}!8m2!3d-12.1!4d-77.1!19s${placeId}`,
+      ),
+    ).resolves.toBe(`https://www.google.com/maps?place_id=${placeId}`);
+  });
+
   it("does not treat identity-like text in a place label as identity data", async () => {
     const first = await resolveGoogleMapsUrl(
       "https://www.google.com/maps/place/A!19sChIJ123",
