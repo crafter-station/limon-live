@@ -97,6 +97,9 @@ describe("live restaurant providers", () => {
       "Cafetería equipment supplier",
       "Panadería alquiler de equipos",
       "Pastelería proveedor",
+      "Restaurante proveedor",
+      "Restaurante equipos",
+      "Restaurante alquiler",
     ]) {
       expect(() =>
         normalizeRestaurant(
@@ -265,7 +268,7 @@ describe("live restaurant providers", () => {
     });
   });
 
-  it("adopts canonical paid identity for a matching path-only input", async () => {
+  it("rejects stable identity returned for path-only input without independent evidence", async () => {
     const placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4";
     const returnedUrl = `${mapsUrl}?query_place_id=${placeId}`;
     const provider = new ApifyGoogleMapsProvider(
@@ -278,10 +281,31 @@ describe("live restaurant providers", () => {
       ) as typeof fetch,
     );
 
-    await expect(provider.load(mapsUrl)).resolves.toMatchObject({
-      name: "Café Limón",
-      mapsUrl: `https://www.google.com/maps?place_id=${placeId}`,
-    });
+    await expect(provider.load(mapsUrl)).rejects.toThrow(
+      UnusableRestaurantError,
+    );
+
+    const sameNameDifferentVenue = new ApifyGoogleMapsProvider(
+      "private-token",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify([
+              {
+                ...place,
+                address: "Calle Norte 99, Barranco",
+                city: "Barranco",
+                location: { lat: -12.15, lng: -77.02 },
+                url: returnedUrl,
+              },
+            ]),
+            { status: 200 },
+          ),
+      ) as typeof fetch,
+    );
+    await expect(sameNameDifferentVenue.load(mapsUrl)).rejects.toThrow(
+      UnusableRestaurantError,
+    );
   });
 
   it("rejects malformed paid-provider responses", async () => {
@@ -350,7 +374,28 @@ describe("live restaurant providers", () => {
     ).toBe("Café Limón: puesto de comida en Lima.");
   });
 
-  it("falls back to baseline and fails when both sources are unusable", async () => {
+  it("returns successful enrichment with or without a baseline", async () => {
+    const baseline = normalizeRestaurant(place, "google-maps-preview", mapsUrl);
+    const enriched = normalizeRestaurant(place, "apify-google-maps", mapsUrl);
+    await expect(
+      new LiveRestaurantProvider(
+        {
+          load: async () => {
+            throw new Error("preview detail");
+          },
+        },
+        { load: async () => enriched },
+      ).load(mapsUrl),
+    ).resolves.toEqual(enriched);
+    await expect(
+      new LiveRestaurantProvider(
+        { load: async () => baseline },
+        { load: async () => enriched },
+      ).load(mapsUrl),
+    ).resolves.toEqual(enriched);
+  });
+
+  it("falls back only for unusable enrichment and fails closed on conflicts", async () => {
     const baseline = normalizeRestaurant(place, "google-maps-preview", mapsUrl);
     await expect(
       new LiveRestaurantProvider(
@@ -372,7 +417,7 @@ describe("live restaurant providers", () => {
         { load: async () => baseline },
         { load: async () => conflict },
       ).load(mapsUrl),
-    ).resolves.toEqual(baseline);
+    ).rejects.toThrow(UnusableRestaurantError);
     const sameNameDifferentVenue = normalizeRestaurant(
       {
         ...place,
@@ -388,7 +433,7 @@ describe("live restaurant providers", () => {
         { load: async () => baseline },
         { load: async () => sameNameDifferentVenue },
       ).load(mapsUrl),
-    ).resolves.toEqual(baseline);
+    ).rejects.toThrow(UnusableRestaurantError);
     const conflictingAddress = normalizeRestaurant(
       { ...place, address: "Calle Norte 99, Barranco", city: "Barranco" },
       "apify-google-maps",
@@ -408,7 +453,7 @@ describe("live restaurant providers", () => {
           { load: async () => baseline },
           { load: async () => partialConflict },
         ).load(mapsUrl),
-      ).resolves.toEqual(baseline);
+      ).rejects.toThrow(UnusableRestaurantError);
     }
     await expect(
       new LiveRestaurantProvider(

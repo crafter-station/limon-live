@@ -9,6 +9,8 @@ import type { RestaurantProvider } from "./types";
 const FOOD_CATEGORY_NAMES: Record<string, string> = {
   restaurant: "restaurante",
   restaurante: "restaurante",
+  "peruvian restaurant": "restaurante",
+  "restaurante peruano": "restaurante",
   "cafe or coffee shop": "café",
   "coffee shop": "cafetería",
   cafe: "café",
@@ -69,11 +71,7 @@ function normalizedCategory(value: string) {
 
 function isFoodCategory(value: string) {
   const category = normalizedCategory(value);
-  return (
-    FOOD_CATEGORY_NAMES[category] !== undefined ||
-    /^restaurante [a-z]+$/.test(category) ||
-    /\b(?:restaurant|cafe|bakery|bistro)$/.test(category)
-  );
+  return FOOD_CATEGORY_NAMES[category] !== undefined;
 }
 
 function factualDescription(name: string, category: string, city: string) {
@@ -293,28 +291,8 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     } catch {
       throw new UnusableRestaurantError();
     }
-    if (normalizedReturnedUrl !== normalizedSource) {
-      let requestedName: string | undefined;
-      let returnedName: string | undefined;
-      try {
-        requestedName = decodeURIComponent(
-          new URL(normalizedSource).pathname.split("/maps/place/")[1] ?? "",
-        );
-        returnedName = decodeURIComponent(
-          new URL(returnedUrl ?? "").pathname.split("/maps/place/")[1] ?? "",
-        );
-      } catch {
-        throw new UnusableRestaurantError();
-      }
-      if (
-        !requestedName ||
-        !returnedName ||
-        normalizedCategory(requestedName.replaceAll("+", " ")) !==
-          normalizedCategory(returnedName.replaceAll("+", " "))
-      ) {
-        throw new UnusableRestaurantError();
-      }
-    }
+    if (normalizedReturnedUrl !== normalizedSource)
+      throw new UnusableRestaurantError();
     return normalizeRestaurant(
       item,
       "apify-google-maps",
@@ -334,12 +312,16 @@ export class LiveRestaurantProvider implements RestaurantProvider {
       baseline = await this.baseline.load(normalizedSource);
     } catch {}
     if (this.enrichment) {
+      let enriched: NormalizedRestaurant;
       try {
-        const enriched = await this.enrichment.load(normalizedSource);
-        if (!baseline || isSameVenue(baseline, enriched)) {
-          return enriched;
-        }
-      } catch {}
+        enriched = await this.enrichment.load(normalizedSource);
+      } catch {
+        if (baseline) return baseline;
+        throw new UnusableRestaurantError();
+      }
+      if (baseline && !isSameVenue(baseline, enriched))
+        throw new UnusableRestaurantError();
+      return enriched;
     }
     if (baseline) return baseline;
     throw new UnusableRestaurantError();
