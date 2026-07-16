@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784181474082,
+      "tag": "0000_fixture_golden_path",
+      "breakpoints": true
+    }
+  ]
+}

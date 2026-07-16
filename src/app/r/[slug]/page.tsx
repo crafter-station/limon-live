@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { RestaurantSite } from "@/components/restaurant-site";
+import { normalizedRestaurantSchema } from "@/domain/restaurant";
+import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
+
+export const metadata: Metadata = {
+  title: "Restaurante generado por Limon",
+  robots: { index: false, follow: false },
+};
+
+export default async function PublishedRestaurantPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const generation = await new DrizzleGenerationRepository().findReadyBySlug(
+    slug,
+  );
+
+  if (!generation?.publishedData) notFound();
+
+  const restaurant = normalizedRestaurantSchema.parse(generation.publishedData);
+  return <RestaurantSite restaurant={restaurant} />;
+}

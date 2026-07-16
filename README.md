@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Limon
 
-## Getting Started
+Limon turns a supported Google Maps fixture into a persisted Spanish restaurant
+page. This first tracer bullet deliberately uses a local fixture provider: it
+establishes the production database, provider, coordinator, and rendering seams
+without making Google, Apify, Vercel Blob, or AI calls.
 
-First, run the development server:
+## Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Install dependencies with `bun install`.
+2. Copy the four names from `.env.example` into `.env.local` and provide values.
+3. Apply the checked-in migration with `bun run db:migrate`.
+4. Start Next.js with `bun run dev`.
+5. Submit the prefilled Las Palmeras URL, advance its generation, and open the
+   resulting `/r/las-palmeras` page.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The exact server-only environment contract is:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `APIFY_PERSONAL_API_TOKEN`
+- `DATABASE_URL`
+- `BLOB_READ_WRITE_TOKEN`
+- `AI_GATEWAY_API_KEY`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Only `DATABASE_URL` is used by this fixture slice. All four are validated
+together at the server boundary because later provider work must not expand or
+leak the contract. No variable is prefixed with `NEXT_PUBLIC_`.
 
-## Learn More
+## Commands
 
-To learn more about Next.js, take a look at the following resources:
+| Command | Purpose |
+| --- | --- |
+| `bun run dev` | Run the development server |
+| `bun run build` | Create a production build |
+| `bun run start` | Serve the production build |
+| `bun run typecheck` | Run strict TypeScript checks |
+| `bun run test` | Run deterministic fixture tests with network access disabled |
+| `bun run lint` | Run Biome lint rules |
+| `bun run format` | Format the repository |
+| `bun run format:check` | Check formatting without writing |
+| `bun run db:generate` | Generate Drizzle migrations |
+| `bun run db:migrate` | Apply migrations to Neon |
+| `bun run db:studio` | Inspect the database with Drizzle Studio |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Data Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The landing Server Action normalizes the supported fixture URL and atomically
+creates or reuses a `restaurant_generations` row. The generation coordinator
+claims that row with a fenced lease, asks the injected fixture provider for a
+normalized restaurant, checkpoints that data, then publishes the same data and
+a stable slug. The restaurant route reads only the ready row's stored JSON; it
+does not import or call a provider.
 
-## Deploy on Vercel
+Automated tests exercise the coordinator through persisted state transitions
+and rendered Spanish output. Test setup replaces global `fetch` with a function
+that throws, so adding an accidental paid network call fails the suite.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Fixture Limitations
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Only the documented Las Palmeras URL is accepted; general Maps URL resolution
+  and live providers are later work.
+- Published pages are immutable and excluded from indexing.
+- Public source information may be incomplete or outdated and is not verified
+  by the restaurant.
+- Ownership, publication rights, privacy, retention, corrections, and takedown
+  processes remain unresolved for production.
