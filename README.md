@@ -22,8 +22,8 @@ disabled. The Apify token is sent only in the authorization header.
 Live debugging is an explicitly paid path. Automated tests use representative
 preview and Apify fixtures and never invoke the actor.
 
-The replaceable public-preview adapter intentionally supports only the
-Schema.org JSON-LD representation currently emitted in a Maps place response:
+The replaceable public-preview adapter intentionally supports only a
+Schema.org JSON-LD representation observed in a Maps place response:
 one `application/ld+json` block with `name`, `@type`, `address.streetAddress`,
 `address.addressLocality`, and `geo.latitude`/`geo.longitude`. The redacted
 representative response in
@@ -32,6 +32,10 @@ undocumented contract down. Its header records the capture date and exact
 redactions; the JSON-LD structure and field types remain unchanged. Additional,
 missing, or malformed JSON-LD blocks and any other representation fail closed
 and leave the paid adapter or sanitized failure path to handle the import.
+`google-maps-current-preview.html` records a traceable 2026-07-16 response
+shape that exposes only undocumented positional state, without a trustworthy
+address/category tuple. It deliberately fails closed rather than guessing at
+that state; this fixture makes current degraded-baseline behavior explicit.
 
 The exact server-only environment contract is:
 

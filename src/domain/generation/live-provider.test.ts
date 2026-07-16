@@ -18,6 +18,10 @@ const previewHtml = readFileSync(
   new URL("./fixtures/google-maps-preview.html", import.meta.url),
   "utf8",
 );
+const currentPreviewHtml = readFileSync(
+  new URL("./fixtures/google-maps-current-preview.html", import.meta.url),
+  "utf8",
+);
 const place = {
   title: "Café Limón",
   categoryName: "Café",
@@ -153,6 +157,19 @@ describe("live restaurant providers", () => {
         ),
       ),
     ).toThrow(UnusableRestaurantError);
+    expect(() =>
+      parseGoogleMapsPreview(
+        '<script type="application/ld+json">not-json</script>',
+      ),
+    ).toThrow(UnusableRestaurantError);
+    expect(() =>
+      parseGoogleMapsPreview(
+        '<script type="application/ld+json">{"name":"Sparse"}</script>',
+      ),
+    ).toThrow(UnusableRestaurantError);
+    expect(() => parseGoogleMapsPreview(currentPreviewHtml)).toThrow(
+      UnusableRestaurantError,
+    );
   });
 
   it("loads and normalizes the public preview with bounded Spanish requests", async () => {
