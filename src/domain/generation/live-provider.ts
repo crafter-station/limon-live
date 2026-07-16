@@ -186,31 +186,31 @@ export function parseGoogleMapsPreview(html: string): ProviderRecord {
       /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
     ),
   ];
-  for (const match of scripts) {
-    try {
-      const data = JSON.parse(match[1]) as ProviderRecord;
-      const geo = data.geo as ProviderRecord | undefined;
-      const address = data.address as ProviderRecord | undefined;
-      if (nonEmptyText(data.name) && geo && address) {
-        return {
-          ...data,
-          category:
-            TECHNICAL_CATEGORY_NAMES[String(data["@type"])] ?? data["@type"],
-          streetAddress: address.streetAddress,
-          addressLocality: address.addressLocality,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-          ratingValue: Number(
-            (data.aggregateRating as ProviderRecord | undefined)?.ratingValue,
-          ),
-          reviewCount: Number(
-            (data.aggregateRating as ProviderRecord | undefined)?.reviewCount,
-          ),
-        };
-      }
-    } catch {
-      // Continue to another JSON-LD block.
+  if (scripts.length !== 1) throw new UnusableRestaurantError();
+
+  try {
+    const data = JSON.parse(scripts[0][1]) as ProviderRecord;
+    const geo = data.geo as ProviderRecord | undefined;
+    const address = data.address as ProviderRecord | undefined;
+    if (nonEmptyText(data.name) && geo && address) {
+      return {
+        ...data,
+        category:
+          TECHNICAL_CATEGORY_NAMES[String(data["@type"])] ?? data["@type"],
+        streetAddress: address.streetAddress,
+        addressLocality: address.addressLocality,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        ratingValue: Number(
+          (data.aggregateRating as ProviderRecord | undefined)?.ratingValue,
+        ),
+        reviewCount: Number(
+          (data.aggregateRating as ProviderRecord | undefined)?.reviewCount,
+        ),
+      };
     }
+  } catch {
+    throw new UnusableRestaurantError();
   }
   throw new UnusableRestaurantError();
 }

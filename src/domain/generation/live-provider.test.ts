@@ -131,6 +131,22 @@ describe("live restaurant providers", () => {
     expect(() => parseGoogleMapsPreview("<html></html>")).toThrow(
       UnusableRestaurantError,
     );
+    expect(() =>
+      parseGoogleMapsPreview(
+        previewHtml.replace(
+          "</head>",
+          '<script type="application/ld+json">{}</script></head>',
+        ),
+      ),
+    ).toThrow(UnusableRestaurantError);
+    expect(() =>
+      parseGoogleMapsPreview(
+        previewHtml.replace(
+          '<script type="application/ld+json">',
+          '<script type="application/ld+json">not-json</script><script type="application/ld+json">',
+        ),
+      ),
+    ).toThrow(UnusableRestaurantError);
   });
 
   it("loads and normalizes the public preview with bounded Spanish requests", async () => {

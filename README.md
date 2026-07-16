@@ -28,8 +28,10 @@ one `application/ld+json` block with `name`, `@type`, `address.streetAddress`,
 `address.addressLocality`, and `geo.latitude`/`geo.longitude`. The redacted
 representative response in
 `src/domain/generation/fixtures/google-maps-preview.html` locks that
-undocumented contract down; any other representation fails closed and leaves
-the paid adapter or sanitized failure path to handle the import.
+undocumented contract down. Its header records the capture date and exact
+redactions; the JSON-LD structure and field types remain unchanged. Additional,
+missing, or malformed JSON-LD blocks and any other representation fail closed
+and leave the paid adapter or sanitized failure path to handle the import.
 
 The exact server-only environment contract is:
 
