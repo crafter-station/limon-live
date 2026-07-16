@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   APIFY_ACTOR_TIMEOUT_SECONDS,
@@ -13,7 +14,10 @@ import {
 } from "./live-provider";
 
 const mapsUrl = "https://www.google.com/maps/place/Cafe+Limon";
-const previewHtml = `<script type="application/ld+json">${JSON.stringify({ "@type": "Restaurant", name: "Casa Sol", servesCuisine: "Restaurante peruano", address: { streetAddress: "Av. Sol 4", addressLocality: "Cusco" }, geo: { latitude: -13.52, longitude: -71.97 } })}</script>`;
+const previewHtml = readFileSync(
+  new URL("./fixtures/google-maps-preview.html", import.meta.url),
+  "utf8",
+);
 const place = {
   title: "Café Limón",
   categoryName: "Café",
@@ -58,6 +62,9 @@ describe("live restaurant providers", () => {
       "CafeOrCoffeeShop",
       "Restaurante peruano",
       "Peruvian restaurant",
+      "Pub",
+      "TeaHouse",
+      "DessertShop",
     ]) {
       expect(() =>
         normalizeRestaurant(
@@ -74,6 +81,18 @@ describe("live restaurant providers", () => {
         mapsUrl,
       ),
     ).toThrow(UnusableRestaurantError);
+    for (const categoryName of [
+      "Tea house furniture store",
+      "Dessert shop supplier",
+    ]) {
+      expect(() =>
+        normalizeRestaurant(
+          { ...place, categoryName },
+          "apify-google-maps",
+          mapsUrl,
+        ),
+      ).toThrow(UnusableRestaurantError);
+    }
     for (const invalid of [null, "", false]) {
       expect(() =>
         normalizeRestaurant(
@@ -284,7 +303,10 @@ describe("live restaurant providers", () => {
       "apify-google-maps",
       mapsUrl,
     );
-    for (const partialConflict of [conflictingAddress, conflictingCoordinates]) {
+    for (const partialConflict of [
+      conflictingAddress,
+      conflictingCoordinates,
+    ]) {
       await expect(
         new LiveRestaurantProvider(
           { load: async () => baseline },

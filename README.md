@@ -22,6 +22,15 @@ disabled. The Apify token is sent only in the authorization header.
 Live debugging is an explicitly paid path. Automated tests use representative
 preview and Apify fixtures and never invoke the actor.
 
+The replaceable public-preview adapter intentionally supports only the
+Schema.org JSON-LD representation currently emitted in a Maps place response:
+one `application/ld+json` block with `name`, `@type`, `address.streetAddress`,
+`address.addressLocality`, and `geo.latitude`/`geo.longitude`. The redacted
+representative response in
+`src/domain/generation/fixtures/google-maps-preview.html` locks that
+undocumented contract down; any other representation fails closed and leaves
+the paid adapter or sanitized failure path to handle the import.
+
 The exact server-only environment contract is:
 
 - `APIFY_PERSONAL_API_TOKEN`

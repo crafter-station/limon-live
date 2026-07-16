@@ -20,12 +20,16 @@ const EXACT_FOOD_CATEGORIES = new Set([
   "heladeria",
   "ice cream shop",
   "bar",
+  "pub",
+  "tea house",
+  "dessert shop",
 ]);
 
 const TECHNICAL_CATEGORY_NAMES: Record<string, string> = {
   Restaurant: "Restaurante",
   CafeOrCoffeeShop: "Café",
   Bakery: "Panadería",
+  BarOrPub: "Pub",
 };
 
 type ProviderRecord = Record<string, unknown>;
@@ -275,11 +279,7 @@ export class ApifyGoogleMapsProvider implements RestaurantProvider {
     const item = items[0] as ProviderRecord;
     if (nonEmptyText(item.url) !== normalizedSource)
       throw new UnusableRestaurantError();
-    return normalizeRestaurant(
-      item,
-      "apify-google-maps",
-      normalizedSource,
-    );
+    return normalizeRestaurant(item, "apify-google-maps", normalizedSource);
   }
 }
 
