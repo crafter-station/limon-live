@@ -86,25 +86,43 @@ function getPathIdentities(url: URL): PlaceIdentity[] {
   const data = url.pathname.match(/\/data=([^/]*)\/?$/)?.[1];
   if (!data) return [];
 
-  const placeIdMatch = data.match(/!19s([^!/?#]+)/);
-  const ftidMatch = data.match(/!1s([^!/?#]+)/);
-  const matches = [placeIdMatch, ftidMatch].filter(
-    (match): match is RegExpMatchArray => match !== null,
-  );
-
-  return matches.map((match) => {
+  const identities = [
+    ...Array.from(data.matchAll(/!19s([^!/?#]+)/g), (match) => [
+      "place_id" as const,
+      match[1],
+    ]),
+    ...Array.from(data.matchAll(/!1s([^!/?#]+)/g), (match) => [
+      "ftid" as const,
+      match[1],
+    ]),
+  ].map(([name, encodedValue]) => {
     let value: string;
     try {
-      value = decodeURIComponent(match[1]);
+      value = decodeURIComponent(encodedValue);
     } catch {
       throw new UnsupportedMapsUrlError();
     }
 
-    return validateIdentity(
-      match === placeIdMatch ? "place_id" : "ftid",
-      value,
-    );
+    return validateIdentity(name, value);
   });
+
+  const uniqueIdentities = identities.filter(
+    (identity, index) =>
+      identities.findIndex(
+        ([name, value]) => name === identity[0] && value === identity[1],
+      ) === index,
+  );
+  if (
+    uniqueIdentities.some(
+      ([name], index) =>
+        uniqueIdentities.findIndex(([otherName]) => otherName === name) !==
+        index,
+    )
+  ) {
+    throw new UnsupportedMapsUrlError();
+  }
+
+  return uniqueIdentities;
 }
 
 function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {

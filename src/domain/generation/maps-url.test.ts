@@ -90,6 +90,8 @@ describe("Google Maps URL resolution", () => {
     "https://www.google.com/maps?query_place_id=ChIJOne&place_id=ChIJTwo",
     "https://www.google.com/maps?place_id=ChIJOne&place_id=ChIJTwo",
     "https://www.google.com/maps?ftid=0x1:0x2&cid=3",
+    `${placeUrl}/data=!19sChIJOne!19sChIJTwo`,
+    `${placeUrl}/data=!1s0x1:0x2!1s0x1:0x3`,
   ])("rejects conflicting place identities: %s", async (input) => {
     await expect(resolveGoogleMapsUrl(input)).rejects.toBeInstanceOf(
       UnsupportedMapsUrlError,
