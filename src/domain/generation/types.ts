@@ -2,7 +2,7 @@ import type { NormalizedRestaurant } from "@/domain/restaurant";
 
 export const MAX_GENERATION_ATTEMPTS = 3;
 export const GENERATION_FAILURE_MESSAGE =
-  "No pudimos generar el sitio en este momento. Inténtalo de nuevo.";
+  "We couldn't finish your site right now. Please try again.";
 
 export type GenerationStatus = "pending" | "generating" | "ready" | "failed";
 

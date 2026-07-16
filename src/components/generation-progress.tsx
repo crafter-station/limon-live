@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useEffectEvent, useState } from "react";
 import type { PublicGenerationStatus } from "@/domain/generation/public-status";
+import { GENERATION_FAILURE_MESSAGE } from "@/domain/generation/types";
 
 const POLL_INTERVAL_MS = 1_500;
 const DELAYED_AFTER_MS = 30_000;
@@ -29,23 +30,28 @@ export function GenerationProgress({
 
   useEffect(() => {
     void retryKey;
-    if (
-      delayed ||
-      generation.status === "ready" ||
-      generation.status === "failed"
-    )
-      return;
+    if (generation.status === "ready" || generation.status === "failed") return;
 
     let active = true;
     let pollTimer: ReturnType<typeof setTimeout>;
     const delayedTimer = setTimeout(() => {
-      if (active) setDelayed(true);
+      if (!active) return;
+      active = false;
+      clearTimeout(pollTimer);
+      setDelayed(true);
     }, DELAYED_AFTER_MS);
 
     async function request(path: string, init?: RequestInit) {
       const response = await fetch(path, { ...init, cache: "no-store" });
       if (!response.ok) throw new Error("Generation request failed");
-      if (active) applyStatus(await response.json());
+      const status: PublicGenerationStatus = await response.json();
+      if (!active) return;
+      applyStatus(status);
+      if (status.status === "ready" || status.status === "failed") {
+        active = false;
+        clearTimeout(delayedTimer);
+        clearTimeout(pollTimer);
+      }
     }
 
     async function poll() {
@@ -69,7 +75,7 @@ export function GenerationProgress({
       clearTimeout(delayedTimer);
       clearTimeout(pollTimer);
     };
-  }, [id, retryKey, delayed, generation.status, applyStatus]);
+  }, [id, retryKey]);
 
   const retry = () => {
     setDelayed(false);
@@ -80,9 +86,7 @@ export function GenerationProgress({
   if (generation.status === "failed") {
     return (
       <div className="generation-state" role="alert">
-        <p className="error">
-          {generation.error ?? "We couldn't finish your site."}
-        </p>
+        <p className="error">{GENERATION_FAILURE_MESSAGE}</p>
         <div className="generation-actions">
           <button className="primary-button" onClick={retry} type="button">
             Try again
@@ -113,13 +117,24 @@ export function GenerationProgress({
   return (
     <output className="generation-state" aria-live="polite">
       <ol className="progress-stages" aria-label="Generation progress">
-        <li data-active={generation.status === "pending"}>
+        <li
+          data-active={generation.status === "pending"}
+          aria-current={generation.status === "pending" ? "step" : undefined}
+        >
           Checking your link
         </li>
-        <li data-active={generation.status === "generating"}>
+        <li
+          data-active={generation.status === "generating"}
+          aria-current={generation.status === "generating" ? "step" : undefined}
+        >
           Building your page
         </li>
-        <li data-active={generation.status === "ready"}>Opening your site</li>
+        <li
+          data-active={generation.status === "ready"}
+          aria-current={generation.status === "ready" ? "step" : undefined}
+        >
+          Opening your site
+        </li>
       </ol>
       <p className="keep-open">Keep this page open while we build your site.</p>
     </output>

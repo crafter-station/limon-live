@@ -150,7 +150,7 @@ describe("fixture generation golden path", () => {
       throw new Error("Expected generation");
 
     await expect(coordinator.advance(submission.id)).rejects.toThrow(
-      "No pudimos generar",
+      "We couldn't finish your site",
     );
     const persisted = await repository.findById(submission.id);
     expect(persisted?.status).toBe("failed");
