@@ -184,6 +184,25 @@ describe("Google Maps URL resolution", () => {
     );
   });
 
+  it("accepts empty-label place data paths directly and after redirects", async () => {
+    const destination =
+      "https://www.google.com/maps/place//data=!4m2!3m1!19sChIJEmptyLabel";
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: destination },
+      }),
+    );
+
+    await expect(resolveGoogleMapsUrl(destination)).resolves.toBe(
+      "https://www.google.com/maps?place_id=ChIJEmptyLabel",
+    );
+    await expect(
+      resolveGoogleMapsUrl("https://maps.app.goo.gl/empty", fetcher),
+    ).resolves.toBe("https://www.google.com/maps?place_id=ChIJEmptyLabel");
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
   it("rejects an unsafe redirect destination", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(null, {

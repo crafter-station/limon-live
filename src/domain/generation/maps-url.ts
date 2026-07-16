@@ -157,7 +157,7 @@ function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
   if (!fullHosts.has(hostname)) throw new UnsupportedMapsUrlError();
 
   const hasPlacePath =
-    /^\/maps\/place\/[^/]+(?:\/@[^/]+)?(?:\/data=[^/]*)?\/?$/.test(
+    /^\/maps\/place\/(?:[^/]+(?:\/@[^/]+)?(?:\/data=[^/]*)?|\/data=[^/]+)\/?$/.test(
       url.pathname,
     );
   const hasPlaceParameter = getParameterIdentity(url) !== undefined;
