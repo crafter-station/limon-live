@@ -252,10 +252,10 @@ describe("published restaurant page", () => {
       "utf8",
     );
     expect(css).toMatch(
-      /\.story-actions > a\s*{[^}]*min-width: 44px;[^}]*min-height: 44px;/s,
+      /\.story-actions > a\s*{[^}]*min-width: 44px;[^}]*min-height: 44px;/,
     );
     expect(css).toMatch(
-      /\.restaurant-page :focus-visible\s*{[^}]*outline: 3px solid var\(--paper\);[^}]*box-shadow: 0 0 0 8px var\(--ink\);/s,
+      /\.restaurant-page :focus-visible\s*{[^}]*outline: 3px solid var\(--paper\);[^}]*box-shadow: 0 0 0 8px var\(--ink\);/,
     );
 
     const luminance = (hex: string) => {
