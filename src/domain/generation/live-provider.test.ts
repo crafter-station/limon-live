@@ -61,6 +61,21 @@ describe("live restaurant providers", () => {
     expect(restaurant.reviews[0].publishedAt).toBe("2026-06-01T00:00:00.000Z");
   });
 
+  it("normalizes an address-only venue without inventing a location", () => {
+    const restaurant = normalizeRestaurant(
+      { ...place, location: undefined },
+      "apify-google-maps",
+      mapsUrl,
+    );
+
+    expect(restaurant).toMatchObject({
+      address: "Calle Lima 10, Miraflores",
+      city: "Lima",
+      location: null,
+      mapsUrl,
+    });
+  });
+
   it("keeps only ranked top-level place photos and excludes reviewer imagery", () => {
     const restaurant = normalizeRestaurant(
       {
@@ -181,7 +196,7 @@ describe("live restaurant providers", () => {
     }
     expect(() =>
       normalizeRestaurant(
-        { ...place, location: undefined },
+        { ...place, address: undefined, location: undefined },
         "apify-google-maps",
         mapsUrl,
       ),
