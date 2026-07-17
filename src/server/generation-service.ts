@@ -8,6 +8,7 @@ import {
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 import { DrizzleRateLimitRepository } from "@/server/db/rate-limit-repository";
 import { getServerEnv } from "@/server/env";
+import { createGatewayMenuExtractor } from "@/server/menu-extractor";
 import { PlacePhotoRetainer } from "@/server/place-photo-retainer";
 import { deriveRequesterKey, utcHour } from "@/server/submission-security";
 
@@ -23,6 +24,7 @@ export function createGenerationCoordinator() {
     ),
     undefined,
     new PlacePhotoRetainer(env.BLOB_READ_WRITE_TOKEN),
+    createGatewayMenuExtractor(env.AI_GATEWAY_API_KEY),
   );
 }
 

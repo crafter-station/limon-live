@@ -162,6 +162,46 @@ export function generationRepositoryContract(
         publishedData: data,
         leaseToken: null,
       });
+
+      const menu = {
+        sections: [
+          {
+            name: null,
+            items: [
+              { name: "Ceviche", description: null, price: null, variants: [] },
+            ],
+          },
+        ],
+      };
+      await expect(
+        repository.saveMenuOutcome(generation.id, "published", menu, null, now),
+      ).resolves.toBe(true);
+      expect(await repository.findReadyBySlug("las-palmeras")).toMatchObject({
+        status: "ready",
+        menuStatus: "published",
+        menuData: menu,
+      });
+    });
+
+    it("does not attach a menu outcome before primary readiness", async () => {
+      const repository = await createRepository();
+      const generation = await repository.createOrGet(
+        FIXTURE_MAPS_URL,
+        FIXTURE_NORMALIZED_SOURCE,
+      );
+      await expect(
+        repository.saveMenuOutcome(
+          generation.id,
+          "none",
+          null,
+          null,
+          new Date(),
+        ),
+      ).resolves.toBe(false);
+      expect(await repository.findById(generation.id)).toMatchObject({
+        status: "pending",
+        menuStatus: "pending",
+      });
     });
 
     it("finalizes an exhausted stale lease instead of stranding it", async () => {

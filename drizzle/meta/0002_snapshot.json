@@ -1,0 +1,210 @@
+{
+  "id": "bf45dae3-cb9d-41f2-8cfa-989dd4b8677e",
+  "prevId": "c2426c13-d30f-4b9c-94bc-5eb108e7f701",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.restaurant_generations": {
+      "name": "restaurant_generations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_source": {
+          "name": "normalized_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "generation_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "provider_checkpoint": {
+          "name": "provider_checkpoint",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_data": {
+          "name": "published_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "menu_status": {
+          "name": "menu_status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "menu_data": {
+          "name": "menu_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "menu_safe_error": {
+          "name": "menu_safe_error",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "safe_error": {
+          "name": "safe_error",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_acquired_at": {
+          "name": "lease_acquired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "restaurant_generations_normalized_source_unique": {
+          "name": "restaurant_generations_normalized_source_unique",
+          "nullsNotDistinct": false,
+          "columns": ["normalized_source"]
+        },
+        "restaurant_generations_slug_unique": {
+          "name": "restaurant_generations_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": ["slug"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ready_generation_has_publication": {
+          "name": "ready_generation_has_publication",
+          "value": "\"restaurant_generations\".\"status\" <> 'ready' OR (\"restaurant_generations\".\"slug\" IS NOT NULL AND \"restaurant_generations\".\"published_data\" IS NOT NULL)"
+        },
+        "generation_attempt_count_nonnegative": {
+          "name": "generation_attempt_count_nonnegative",
+          "value": "\"restaurant_generations\".\"attempt_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.submission_rate_limits": {
+      "name": "submission_rate_limits",
+      "schema": "",
+      "columns": {
+        "requester_key": {
+          "name": "requester_key",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_start": {
+          "name": "window_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_count": {
+          "name": "request_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "submission_rate_limits_requester_key_window_start_pk": {
+          "name": "submission_rate_limits_requester_key_window_start_pk",
+          "columns": ["requester_key", "window_start"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rate_limit_count_positive": {
+          "name": "rate_limit_count_positive",
+          "value": "\"submission_rate_limits\".\"request_count\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.generation_status": {
+      "name": "generation_status",
+      "schema": "public",
+      "values": ["pending", "generating", "ready", "failed"]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

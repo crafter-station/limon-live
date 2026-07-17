@@ -10,6 +10,7 @@ import {
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
   type RestaurantMediaRetainer,
+  type RestaurantMenuExtractor,
   type RestaurantProvider,
 } from "./types";
 
@@ -45,6 +46,7 @@ export class GenerationCoordinator {
     private readonly mediaRetainer: RestaurantMediaRetainer = {
       retain: async (_generationId, data) => data,
     },
+    private readonly menuExtractor: RestaurantMenuExtractor | null = null,
   ) {}
 
   async submit(sourceUrl: string): Promise<SubmissionResult> {
@@ -119,6 +121,31 @@ export class GenerationCoordinator {
         this.now(),
       );
       if (!published?.slug) return { kind: "generating", id };
+
+      if (this.menuExtractor && retainedData.photos.length) {
+        try {
+          const menu = await this.menuExtractor.extract(retainedData.photos);
+          await this.repository.saveMenuOutcome(
+            id,
+            menu ? "published" : "none",
+            menu,
+            null,
+            this.now(),
+          );
+        } catch {
+          try {
+            await this.repository.saveMenuOutcome(
+              id,
+              "failed",
+              null,
+              "Menu processing was unavailable.",
+              this.now(),
+            );
+          } catch {
+            // The optional menu outcome cannot change primary readiness.
+          }
+        }
+      }
 
       return { kind: "ready", slug: published.slug };
     } catch {

@@ -15,6 +15,13 @@
       "when": 1784184574627,
       "tag": "0001_lucky_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784260728058,
+      "tag": "0002_furry_dracula",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import type { Menu } from "@/domain/menu";
 import type { NormalizedRestaurant } from "@/domain/restaurant";
 
 export const MAX_GENERATION_ATTEMPTS = 3;
@@ -5,6 +6,7 @@ export const GENERATION_FAILURE_MESSAGE =
   "We couldn't finish your site right now. Please try again.";
 
 export type GenerationStatus = "pending" | "generating" | "ready" | "failed";
+export type MenuStatus = "pending" | "published" | "none" | "failed";
 
 export type Generation = {
   id: string;
@@ -13,6 +15,9 @@ export type Generation = {
   status: GenerationStatus;
   providerCheckpoint: NormalizedRestaurant | null;
   publishedData: NormalizedRestaurant | null;
+  menuStatus: MenuStatus;
+  menuData: Menu | null;
+  menuSafeError: string | null;
   slug: string | null;
   safeError: string | null;
   leaseToken: string | null;
@@ -51,6 +56,13 @@ export interface GenerationRepository {
     safeError: string,
     now: Date,
   ): Promise<void>;
+  saveMenuOutcome(
+    id: string,
+    status: Exclude<MenuStatus, "pending">,
+    menu: Menu | null,
+    safeError: string | null,
+    now: Date,
+  ): Promise<boolean>;
 }
 
 export interface RestaurantProvider {
@@ -62,4 +74,8 @@ export interface RestaurantMediaRetainer {
     generationId: string,
     data: NormalizedRestaurant,
   ): Promise<NormalizedRestaurant>;
+}
+
+export interface RestaurantMenuExtractor {
+  extract(photos: NormalizedRestaurant["photos"]): Promise<Menu | null>;
 }
