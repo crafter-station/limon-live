@@ -428,6 +428,71 @@ describe("menu validation", () => {
   );
 
   it.each(["PEN", "S/", "S/."] as const)(
+    "requires independent %s evidence for identical item and variant prices",
+    (visibleCurrency) => {
+      const candidate = (visibleText: string) =>
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Pasta",
+                  description: null,
+                  price: {
+                    label: null,
+                    amount: "20",
+                    visibleCurrency,
+                  },
+                  variants: [
+                    {
+                      name: "Familiar",
+                      price: {
+                        label: null,
+                        amount: "20",
+                        visibleCurrency,
+                      },
+                    },
+                  ],
+                  visibleText,
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        });
+
+      expect(
+        validateGroundedMenu(
+          candidate(`Pasta ${visibleCurrency} 20 Familiar 20`),
+          1,
+        ),
+      ).toBeNull();
+      expect(
+        validateGroundedMenu(
+          candidate(`Pasta 20 Familiar ${visibleCurrency} 20`),
+          1,
+        ),
+      ).toBeNull();
+      expect(
+        validateGroundedMenu(
+          candidate(`Pasta Familiar ${visibleCurrency} 20`),
+          1,
+        ),
+      ).toBeNull();
+      expect(
+        validateGroundedMenu(
+          candidate(
+            `Pasta ${visibleCurrency} 20 Familiar ${visibleCurrency} 20`,
+          ),
+          1,
+        ),
+      ).not.toBeNull();
+    },
+  );
+
+  it.each(["PEN", "S/", "S/."] as const)(
     "accepts a visible %s item-price marker",
     (visibleCurrency) => {
       expect(

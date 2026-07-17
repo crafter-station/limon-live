@@ -84,12 +84,7 @@ function isVisible(value: string | null, visibleText: string) {
   return value === null || visibleText.includes(value);
 }
 
-function hasVisiblePrice(
-  price: z.infer<typeof extractedPriceSchema> | null,
-  visibleText: string,
-) {
-  if (price === null) return true;
-
+function visiblePricePattern(price: z.infer<typeof extractedPriceSchema>) {
   const amount = price.amount.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const amountToken = `(?<![\\p{L}\\p{N}_.,])${amount}(?![\\p{L}\\p{N}_.,])`;
   const currencyToken =
@@ -101,8 +96,34 @@ function hasVisiblePrice(
 
   return new RegExp(
     `(?:${currencyToken}\\s*${amountToken}|${amountToken}\\s*${currencyToken})`,
-    "u",
-  ).test(visibleText);
+    "gu",
+  );
+}
+
+function hasIndependentVisiblePrices(
+  prices: Array<z.infer<typeof extractedPriceSchema> | null>,
+  visibleText: string,
+) {
+  const usedRanges: Array<[number, number]> = [];
+
+  return prices.every((price) => {
+    if (price === null) return true;
+
+    for (const match of visibleText.matchAll(visiblePricePattern(price))) {
+      const start = match.index;
+      const end = start + match[0].length;
+      if (
+        usedRanges.every(
+          ([usedStart, usedEnd]) => end <= usedStart || start >= usedEnd,
+        )
+      ) {
+        usedRanges.push([start, end]);
+        return true;
+      }
+    }
+
+    return false;
+  });
 }
 
 export function validateGroundedMenu(
@@ -126,12 +147,14 @@ export function validateGroundedMenu(
         !isVisible(item.name, item.visibleText) ||
         !isVisible(item.description, item.visibleText) ||
         !isVisible(item.price?.label ?? null, item.visibleText) ||
-        !hasVisiblePrice(item.price, item.visibleText) ||
+        !hasIndependentVisiblePrices(
+          [item.price, ...item.variants.map((variant) => variant.price)],
+          item.visibleText,
+        ) ||
         item.variants.some(
           (variant) =>
             !isVisible(variant.name, item.visibleText) ||
-            !isVisible(variant.price.label, item.visibleText) ||
-            !hasVisiblePrice(variant.price, item.visibleText),
+            !isVisible(variant.price.label, item.visibleText),
         )
       ) {
         return null;
