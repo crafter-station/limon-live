@@ -139,6 +139,10 @@ describe("published restaurant page", () => {
     expect(html).toContain("Comedor de Restaurante Las Palmeras");
     expect(html).toContain("Foto: María P.");
     expect(html).toContain("Foto: Google Maps");
+    expect(html).toContain(
+      "https://store.public.blob.vercel-storage.com/hero.jpg",
+    );
+    expect(html).not.toContain("/_next/image");
     expect(html).toContain("review-initials");
     expect(html).toContain("AP");
     expect(html).not.toContain("googleusercontent.com/avatar");

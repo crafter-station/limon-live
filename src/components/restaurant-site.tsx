@@ -31,6 +31,7 @@ export function RestaurantSite({
             alt={heroPhoto.alt}
             fill
             sizes="100vw"
+            unoptimized
           />
         ) : (
           <div className="hero-orbit" aria-hidden="true" />
@@ -68,6 +69,7 @@ export function RestaurantSite({
                   width={1200}
                   height={900}
                   sizes="(max-width: 800px) 100vw, 50vw"
+                  unoptimized
                 />
                 {photo.attribution ? (
                   <figcaption>Foto: {photo.attribution}</figcaption>
