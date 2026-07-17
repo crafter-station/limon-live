@@ -242,6 +242,71 @@ describe("menu validation", () => {
     ).toBeNull();
   });
 
+  it("rejects S/ inside unrelated item text as item-price currency evidence", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Pasta",
+                  description: null,
+                  price: {
+                    label: null,
+                    amount: "20",
+                    visibleCurrency: "S/",
+                  },
+                  variants: [],
+                  visibleText: "Pasta 20 S/A",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects S/ inside unrelated variant text as variant-price currency evidence", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Pasta",
+                  description: null,
+                  price: null,
+                  variants: [
+                    {
+                      name: "Familiar",
+                      price: {
+                        label: null,
+                        amount: "20",
+                        visibleCurrency: "S/",
+                      },
+                    },
+                  ],
+                  visibleText: "Pasta Familiar 20 S/A",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
   it("rejects an item currency marker borrowed from its variant price", () => {
     expect(
       validateGroundedMenu(

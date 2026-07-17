@@ -87,15 +87,19 @@ function isVisible(value: string | null, visibleText: string) {
 function visiblePricePattern(price: z.infer<typeof extractedPriceSchema>) {
   const amount = price.amount.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const amountToken = `(?<![\\p{L}\\p{N}_.,])${amount}(?![\\p{L}\\p{N}_.,])`;
-  const currencyToken =
+  const currencyBeforeAmountToken =
     price.visibleCurrency === "PEN"
       ? "(?<![\\p{L}\\p{N}_])PEN(?![\\p{L}\\p{N}_])"
       : price.visibleCurrency === "S/"
         ? "(?<![\\p{L}\\p{N}_])S\\/(?!\\.)"
         : "(?<![\\p{L}\\p{N}_])S\\/\\.(?![\\p{L}\\p{N}_])";
+  const currencyAfterAmountToken =
+    price.visibleCurrency === "S/"
+      ? "(?<![\\p{L}\\p{N}_])S\\/(?![\\p{L}\\p{N}_.])"
+      : currencyBeforeAmountToken;
 
   return new RegExp(
-    `(?:${currencyToken}\\s*${amountToken}|${amountToken}\\s*${currencyToken})`,
+    `(?:${currencyBeforeAmountToken}\\s*${amountToken}|${amountToken}\\s*${currencyAfterAmountToken})`,
     "gu",
   );
 }
