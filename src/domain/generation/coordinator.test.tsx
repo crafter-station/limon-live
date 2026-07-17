@@ -8,7 +8,7 @@ import {
   FIXTURE_MAPS_URL,
   FixtureRestaurantProvider,
 } from "./fixture-provider";
-import { ApifyGoogleMapsProvider } from "./live-provider";
+import { ApifyGoogleMapsProvider, normalizeRestaurant } from "./live-provider";
 
 describe("fixture generation golden path", () => {
   it("creates stable, non-empty, venue-specific slugs", () => {
@@ -119,6 +119,40 @@ describe("fixture generation golden path", () => {
     expect(html).toContain("Visítanos");
     expect(html).toContain("No verificado por el restaurante");
     expect(load).toHaveBeenCalledOnce();
+  });
+
+  it("publishes address-only provider data with a Maps directions fallback", async () => {
+    const repository = new MemoryGenerationRepository();
+    const coordinator = new GenerationCoordinator(repository, {
+      load: async (source) =>
+        normalizeRestaurant(
+          {
+            title: "Café Limón",
+            categoryName: "Café",
+            address: "Calle Lima 10, Miraflores",
+            city: "Lima",
+          },
+          "apify-google-maps",
+          source,
+        ),
+    });
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+
+    await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+      kind: "ready",
+    });
+    const persisted = await repository.findById(submission.id);
+    if (!persisted?.publishedData)
+      throw new Error("Expected stored publication");
+
+    expect(persisted.publishedData.location).toBeNull();
+    const html = renderToStaticMarkup(
+      <RestaurantSite restaurant={persisted.publishedData} />,
+    );
+    expect(html).toContain(`href="${FIXTURE_MAPS_URL}"`);
+    expect(html).not.toContain("output=embed");
   });
 
   it("sends a ready duplicate directly to the stored slug without provider work", async () => {

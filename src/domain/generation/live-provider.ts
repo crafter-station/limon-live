@@ -107,8 +107,10 @@ function isSameVenue(
     sameNormalizedText(baseline.address, enriched.address) &&
     sameNormalizedText(baseline.city, enriched.city);
   const coordinatesAgree =
-    Math.abs(baseline.location.lat - enriched.location.lat) <= 0.001 &&
-    Math.abs(baseline.location.lng - enriched.location.lng) <= 0.001;
+    !baseline.location ||
+    !enriched.location ||
+    (Math.abs(baseline.location.lat - enriched.location.lat) <= 0.001 &&
+      Math.abs(baseline.location.lng - enriched.location.lng) <= 0.001);
   return addressAgrees && coordinatesAgree;
 }
 
@@ -123,8 +125,21 @@ export function normalizeRestaurant(
   const address = nonEmptyText(value.streetAddress ?? value.address);
   const city = nonEmptyText(value.city ?? value.addressLocality);
   const location = value.location as ProviderRecord | undefined;
-  const lat = coordinate(location?.lat ?? value.latitude);
-  const lng = coordinate(location?.lng ?? value.longitude);
+  const rawLat = location?.lat ?? value.latitude;
+  const rawLng = location?.lng ?? value.longitude;
+  const hasLat = rawLat !== undefined && rawLat !== null;
+  const hasLng = rawLng !== undefined && rawLng !== null;
+  const lat = coordinate(rawLat);
+  const lng = coordinate(rawLng);
+  const hasCompleteLocation =
+    hasLat &&
+    hasLng &&
+    lat !== null &&
+    lng !== null &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180;
 
   if (
     !name ||
@@ -132,12 +147,7 @@ export function normalizeRestaurant(
     !address ||
     !city ||
     !isFoodCategory(category) ||
-    lat === null ||
-    lng === null ||
-    lat < -90 ||
-    lat > 90 ||
-    lng < -180 ||
-    lng > 180
+    (hasLat || hasLng) !== hasCompleteLocation
   ) {
     throw new UnusableRestaurantError();
   }
@@ -169,7 +179,7 @@ export function normalizeRestaurant(
     city,
     phone: nonEmptyText(value.phoneUnformatted ?? value.phone),
     website: nonEmptyText(value.website),
-    location: { lat, lng },
+    location: hasCompleteLocation ? { lat, lng } : null,
     hours: rawHours.flatMap((entry) => {
       const item = entry as ProviderRecord;
       const day = nonEmptyText(item.day);

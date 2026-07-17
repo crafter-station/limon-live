@@ -37,7 +37,7 @@ export const normalizedRestaurantSchema = z.object({
   city: z.string().min(1),
   phone: z.string().min(1).nullable(),
   website: z.url().nullable(),
-  location: locationSchema,
+  location: locationSchema.nullable(),
   hours: hoursSchema,
   rating: z.number().min(0).max(5).nullable(),
   reviewCount: z.number().int().nonnegative().nullable(),
