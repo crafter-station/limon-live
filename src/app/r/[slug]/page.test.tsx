@@ -4,7 +4,6 @@ import {
   FIXTURE_NORMALIZED_SOURCE,
   FixtureRestaurantProvider,
 } from "@/domain/generation/fixture-provider";
-import type { Generation } from "@/domain/generation/types";
 
 const findReadyBySlug = vi.hoisted(() => vi.fn());
 
@@ -49,7 +48,7 @@ describe("published restaurant page", () => {
       attemptCount: 1,
       createdAt: new Date("2026-07-16T10:00:00.000Z"),
       updatedAt: new Date("2026-07-16T10:00:00.000Z"),
-    } satisfies Generation);
+    });
 
     const page = await PublishedRestaurantPage({
       params: Promise.resolve({ slug: "las-palmeras" }),

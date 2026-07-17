@@ -48,6 +48,7 @@ export function openingStatus(
     if (day === undefined || ranges === null || schedule.has(day)) return null;
     schedule.set(day, ranges);
   }
+  if (schedule.size !== 7) return null;
 
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Lima",

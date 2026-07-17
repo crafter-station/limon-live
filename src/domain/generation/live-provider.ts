@@ -58,6 +58,13 @@ function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function isoDate(value: unknown): string | null {
+  const text = nonEmptyText(value);
+  if (!text) return null;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function coordinate(value: unknown): number | null {
   if (typeof value !== "number" && !(typeof value === "string" && value.trim()))
     return null;
@@ -181,6 +188,7 @@ export function normalizeRestaurant(
               author: nonEmptyText(item.name ?? item.author),
               text: reviewText,
               rating: typeof item.stars === "number" ? item.stars : null,
+              publishedAt: isoDate(item.publishedAtDate ?? item.publishedAt),
             },
           ]
         : [];

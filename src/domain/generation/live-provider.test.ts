@@ -31,7 +31,14 @@ const place = {
   totalScore: 4.5,
   reviewsCount: 12,
   openingHours: [{ day: "lunes", hours: "08:00-18:00" }],
-  reviews: [{ name: "Ana", text: "Buen café", stars: 5 }],
+  reviews: [
+    {
+      name: "Ana",
+      text: "Buen café",
+      stars: 5,
+      publishedAtDate: "2026-06-01T00:00:00.000Z",
+    },
+  ],
   url: mapsUrl,
 };
 
@@ -51,6 +58,7 @@ describe("live restaurant providers", () => {
       diagnostics: { warnings: ["description-generated"] },
     });
     expect(restaurant.reviews).toHaveLength(1);
+    expect(restaurant.reviews[0].publishedAt).toBe("2026-06-01T00:00:00.000Z");
   });
 
   it("keeps only ranked top-level place photos and excludes reviewer imagery", () => {

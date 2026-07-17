@@ -26,6 +26,11 @@ describe("restaurant presentation", () => {
 
   it("uses Lima time with exact and overnight boundaries", () => {
     const hours = [
+      { day: "domingo", hours: "cerrado" },
+      { day: "lunes", hours: "cerrado" },
+      { day: "martes", hours: "cerrado" },
+      { day: "miércoles", hours: "cerrado" },
+      { day: "jueves", hours: "cerrado" },
       { day: "viernes", hours: "18:00-02:00" },
       { day: "sábado", hours: "10:00-14:00" },
     ];
@@ -47,6 +52,7 @@ describe("restaurant presentation", () => {
     expect(
       openingStatus([{ day: "lunes", hours: "horario variable" }]),
     ).toBeNull();
+    expect(openingStatus([{ day: "lunes", hours: "09:00-17:00" }])).toBeNull();
     expect(openingStatus([{ day: "quizá", hours: "09:00-17:00" }])).toBeNull();
     expect(safeWebsite("javascript:alert(1)")).toBeNull();
     expect(safeWebsite("https://user:pass@example.com")).toBeNull();
