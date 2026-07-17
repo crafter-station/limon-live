@@ -11,6 +11,7 @@ const reviewsSchema = z.array(
     author: z.string().nullable(),
     text: z.string(),
     rating: z.number().min(0).max(5).nullable(),
+    publishedAt: z.iso.datetime().nullable().optional(),
   }),
 );
 const photoSchema = z.object({
