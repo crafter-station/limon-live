@@ -11,6 +11,7 @@ const reviewsSchema = z.array(
     author: z.string().nullable(),
     text: z.string(),
     rating: z.number().min(0).max(5).nullable(),
+    publishedAt: z.iso.datetime().nullable().optional(),
   }),
 );
 const photoSchema = z.object({
@@ -58,7 +59,7 @@ export type NormalizedRestaurant = z.infer<typeof normalizedRestaurantSchema>;
 
 // Published records predate the live-provider fields and remain immutable.
 export const storedRestaurantSchema = normalizedRestaurantSchema.extend({
-  website: z.url().nullable().default(null),
+  website: z.string().nullable().default(null),
   location: locationSchema.nullable().default(null),
   hours: hoursSchema.default([]),
   reviews: reviewsSchema.default([]),

@@ -1,17 +1,37 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import type { StoredRestaurant } from "@/domain/restaurant";
+import {
+  openingStatus,
+  safeWebsite,
+  selectedReviews,
+} from "@/domain/restaurant-presentation";
 
 export function RestaurantSite({
   restaurant,
+  slug,
 }: {
   restaurant: StoredRestaurant;
+  slug?: string;
 }) {
   const importedDate = new Intl.DateTimeFormat("es-PE", {
     dateStyle: "long",
     timeZone: "America/Lima",
   }).format(new Date(restaurant.importedAt));
   const heroPhoto = restaurant.photos[0];
+  const reviews = selectedReviews(restaurant.reviews);
+  const website = safeWebsite(restaurant.website);
+  const status = openingStatus(restaurant.hours);
+  const stablePath = `/r/${encodeURIComponent(
+    slug ??
+      restaurant.name
+        .toLocaleLowerCase("es")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, ""),
+  )}`;
+  const mapEmbed = restaurant.location
+    ? `https://www.google.com/maps?q=${restaurant.location.lat},${restaurant.location.lng}&z=16&output=embed`
+    : null;
 
   return (
     <main className="restaurant-page" lang="es">
@@ -19,7 +39,9 @@ export function RestaurantSite({
         <Link className="wordmark" href="/">
           Limon
         </Link>
-        <a href={restaurant.mapsUrl}>Cómo llegar</a>
+        <a href={restaurant.mapsUrl} rel="nofollow noreferrer">
+          Cómo llegar
+        </a>
       </nav>
       <header
         className={`restaurant-hero ${heroPhoto ? "restaurant-hero-photo" : "restaurant-hero-fallback"}`}
@@ -39,7 +61,7 @@ export function RestaurantSite({
         <div className="restaurant-hero-copy">
           <p className="eyebrow">{restaurant.category}</p>
           <h1>{restaurant.name}</h1>
-          <p>{restaurant.description}</p>
+          <p>{restaurant.address}</p>
           <div className="restaurant-facts">
             {restaurant.rating !== null ? (
               <span>
@@ -50,12 +72,28 @@ export function RestaurantSite({
               </span>
             ) : null}
             <span>{restaurant.city}</span>
+            {status ? <span>{status}</span> : null}
           </div>
         </div>
         {heroPhoto?.attribution ? (
           <p className="hero-attribution">Foto: {heroPhoto.attribution}</p>
         ) : null}
       </header>
+      <section className="story-section" aria-labelledby="story-title">
+        <p className="eyebrow">La historia del lugar</p>
+        <h2 id="story-title">Una mesa por descubrir</h2>
+        <p>{restaurant.description}</p>
+        <div className="story-actions">
+          {restaurant.phone ? (
+            <a href={`tel:${restaurant.phone}`}>Llamar</a>
+          ) : null}
+          {website ? (
+            <a href={website} rel="nofollow noopener noreferrer">
+              Sitio oficial
+            </a>
+          ) : null}
+        </div>
+      </section>
       {restaurant.photos.length > 1 ? (
         <section className="restaurant-gallery" aria-labelledby="gallery-title">
           <p className="eyebrow">Galería</p>
@@ -79,53 +117,105 @@ export function RestaurantSite({
           </div>
         </section>
       ) : null}
-      {restaurant.reviews.length ? (
+      {reviews.length || restaurant.rating !== null ? (
         <section className="reviews-section" aria-labelledby="reviews-title">
           <p className="eyebrow">Reseñas</p>
           <h2 id="reviews-title">Lo que dicen en Google</h2>
-          <div className="review-grid">
-            {restaurant.reviews.map((review, index) => {
-              const initials = (review.author ?? "Visitante")
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((part) => part[0])
-                .join("")
-                .toLocaleUpperCase("es");
-              return (
-                <article key={`${review.author ?? "visitante"}-${index}`}>
-                  <span className="review-initials" aria-hidden="true">
-                    {initials}
-                  </span>
-                  <p>{review.text}</p>
-                  <strong>{review.author ?? "Visitante de Google"}</strong>
-                </article>
-              );
-            })}
-          </div>
+          {reviews.length ? (
+            <div className="review-grid">
+              {reviews.map((review, index) => {
+                const initials = (review.author ?? "Visitante")
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")
+                  .toLocaleUpperCase("es");
+                return (
+                  <article key={`${review.author ?? "visitante"}-${index}`}>
+                    <span className="review-initials" aria-hidden="true">
+                      {initials}
+                    </span>
+                    <p>{review.text}</p>
+                    <strong>{review.author ?? "Visitante de Google"}</strong>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="review-fallback">
+              {restaurant.rating?.toFixed(1)} de 5 en Google. Consulta las
+              reseñas completas para conocer más perspectivas.
+            </p>
+          )}
+          <a
+            className="inverse-link"
+            href={restaurant.mapsUrl}
+            rel="nofollow noreferrer"
+          >
+            Ver todas las reseñas en Google Maps
+          </a>
         </section>
       ) : null}
-      <section className="visit-section">
-        <div>
+      <section className="visit-section" aria-labelledby="visit-title">
+        <div className="visit-copy">
           <p className="eyebrow">Visítanos</p>
-          <h2>Te esperamos en {restaurant.city}</h2>
+          <h2 id="visit-title">Planifica tu visita</h2>
           <p>{restaurant.address}</p>
-        </div>
-        <div className="visit-actions">
-          <a className="primary-button" href={restaurant.mapsUrl}>
-            Ver en Google Maps
-          </a>
-          {restaurant.phone ? (
-            <a href={`tel:${restaurant.phone}`}>Llamar</a>
+          {restaurant.hours.length ? (
+            <div className="hours-block">
+              <h3>Horarios publicados</h3>
+              <dl>
+                {restaurant.hours.map((entry) => (
+                  <div key={`${entry.day}-${entry.hours}`}>
+                    <dt>{entry.day}</dt>
+                    <dd>{entry.hours}</dd>
+                  </div>
+                ))}
+              </dl>
+              {!status ? <p>Confirma el horario antes de ir.</p> : null}
+            </div>
           ) : null}
+        </div>
+        <div className="map-card">
+          {mapEmbed ? (
+            <iframe
+              src={mapEmbed}
+              title={`Mapa de ${restaurant.name}`}
+              loading="eager"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          ) : (
+            <div className="map-fallback">Mapa no disponible</div>
+          )}
+          <a
+            className="primary-button"
+            href={restaurant.mapsUrl}
+            rel="nofollow noreferrer"
+          >
+            Cómo llegar en Google Maps
+          </a>
         </div>
       </section>
       <footer className="restaurant-footer">
-        <p>Información importada el {importedDate}.</p>
-        <p>Fuente: {restaurant.attribution}.</p>
-        <p>
-          Sitio generado automáticamente por Limon con información pública. No
-          verificado por el restaurante.
-        </p>
+        <div>
+          <Link className="wordmark" href="/">
+            Limon
+          </Link>
+          <p>Made with limon</p>
+        </div>
+        <div>
+          <p>
+            Información importada el {importedDate}. Fuente:{" "}
+            {restaurant.attribution}.
+          </p>
+          <p>
+            URL estable: <a href={stablePath}>limon.live{stablePath}</a>
+          </p>
+          <p>
+            Página independiente creada automáticamente con información pública.
+            No verificado por el restaurante; no es su sitio oficial.
+          </p>
+        </div>
       </footer>
     </main>
   );
