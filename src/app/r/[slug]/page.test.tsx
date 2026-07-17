@@ -194,7 +194,8 @@ describe("published restaurant page", () => {
     expect(html).toContain("q=-12.1211,-77.0297");
     expect(html).toContain('loading="eager"');
     expect(html).toContain("Ver todas las reseñas en Google Maps");
-    expect(html).toContain("limon.live/r/las-palmeras");
+    expect(html).toContain("https://las-palmeras.limon.lat/");
+    expect(html).toContain("las-palmeras.limon.lat");
     expect(html).toContain("Made with limon");
     expect(html).toContain("no es su sitio oficial");
   });

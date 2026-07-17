@@ -25,13 +25,13 @@ export function RestaurantSite({
   const reviews = selectedReviews(restaurant.reviews);
   const website = safeWebsite(restaurant.website);
   const status = openingStatus(restaurant.hours);
-  const stablePath = `/r/${encodeURIComponent(
+  const stableSlug = encodeURIComponent(
     slug ??
       restaurant.name
         .toLocaleLowerCase("es")
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, ""),
-  )}`;
+  );
   const mapEmbed = restaurant.location
     ? `https://www.google.com/maps?q=${restaurant.location.lat},${restaurant.location.lng}&z=16&output=embed`
     : null;
@@ -269,7 +269,10 @@ export function RestaurantSite({
             {restaurant.attribution}.
           </p>
           <p>
-            URL estable: <a href={stablePath}>limon.live{stablePath}</a>
+            URL estable:{" "}
+            <a href={`https://${stableSlug}.limon.lat/`}>
+              {stableSlug}.limon.lat
+            </a>
           </p>
           <p>
             Página independiente creada automáticamente con información pública.
