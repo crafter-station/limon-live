@@ -130,7 +130,10 @@ release cadence; keep `LiveRestaurantProvider` as the reconciliation boundary.
 
 ## Limitations
 
-- Published pages are immutable and excluded from indexing.
+- A published page's primary restaurant data and stable slug are immutable and
+  excluded from indexing. Optional referential menu metadata is the sole narrow
+  post-publication enrichment: it may transition independently after primary
+  publication without changing that restaurant data or slug.
 - Public source information may be incomplete or outdated and is not verified
   by the restaurant.
 - Ownership, publication rights, privacy, retention, corrections, and takedown

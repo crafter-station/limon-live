@@ -329,4 +329,14 @@ describe("published restaurant page", () => {
     expect(contrast("#183a2d", "#f5f0df")).toBeGreaterThanOrEqual(3);
     expect(contrast("#fffdf5", "#183a2d")).toBeGreaterThanOrEqual(3);
   });
+
+  it("collapses the menu grid at the repository mobile breakpoint", () => {
+    const css = readFileSync(
+      new URL("../../globals.css", import.meta.url),
+      "utf8",
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 800px\) \{\s*\.landing-grid,\s*\.story-section,\s*\.visit-section,\s*\.restaurant-footer,\s*\.gallery-grid,\s*\.menu-grid,\s*\.review-grid \{\s*grid-template-columns: 1fr;/,
+    );
+  });
 });

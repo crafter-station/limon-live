@@ -123,6 +123,60 @@ describe("menu validation", () => {
     ).toBeNull();
   });
 
+  it("rejects an item price whose currency is not visibly grounded", () => {
+    const item = valid.sections[0].items[0];
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          ...valid,
+          sections: [
+            {
+              ...valid.sections[0],
+              items: [
+                {
+                  ...item,
+                  visibleText: item.visibleText.replace("S/ ", ""),
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects a variant price with invented currency evidence", () => {
+    const item = valid.sections[0].items[0];
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          ...valid,
+          sections: [
+            {
+              ...valid.sections[0],
+              items: [
+                {
+                  ...item,
+                  variants: [
+                    {
+                      ...item.variants[0],
+                      price: {
+                        ...item.variants[0].price,
+                        visibleCurrency: "S/.",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
   it.each([
     "empty",
     "unreadable",

@@ -106,11 +106,13 @@ export function validateGroundedMenu(
         !isVisible(item.description, item.visibleText) ||
         !isVisible(item.price?.label ?? null, item.visibleText) ||
         !isVisible(item.price?.amount ?? null, item.visibleText) ||
+        !isVisible(item.price?.visibleCurrency ?? null, item.visibleText) ||
         item.variants.some(
           (variant) =>
             !isVisible(variant.name, item.visibleText) ||
             !isVisible(variant.price.label, item.visibleText) ||
-            !isVisible(variant.price.amount, item.visibleText),
+            !isVisible(variant.price.amount, item.visibleText) ||
+            !isVisible(variant.price.visibleCurrency, item.visibleText),
         )
       ) {
         return null;

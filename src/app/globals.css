@@ -795,6 +795,7 @@ input {
   .visit-section,
   .restaurant-footer,
   .gallery-grid,
+  .menu-grid,
   .review-grid {
     grid-template-columns: 1fr;
   }
