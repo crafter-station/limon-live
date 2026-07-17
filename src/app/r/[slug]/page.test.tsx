@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -220,21 +221,11 @@ describe("published restaurant page", () => {
       return renderToStaticMarkup(page);
     };
 
-    expect(await statusAt("2026-07-17T23:00:00Z")).toContain(
-      "Abierto ahora",
-    );
-    expect(await statusAt("2026-07-18T06:59:00Z")).toContain(
-      "Abierto ahora",
-    );
-    expect(await statusAt("2026-07-18T07:00:00Z")).toContain(
-      "Cerrado ahora",
-    );
-    expect(await statusAt("2026-07-18T15:00:00Z")).toContain(
-      "Abierto ahora",
-    );
-    expect(await statusAt("2026-07-18T19:00:00Z")).toContain(
-      "Cerrado ahora",
-    );
+    expect(await statusAt("2026-07-17T23:00:00Z")).toContain("Abierto ahora");
+    expect(await statusAt("2026-07-18T06:59:00Z")).toContain("Abierto ahora");
+    expect(await statusAt("2026-07-18T07:00:00Z")).toContain("Cerrado ahora");
+    expect(await statusAt("2026-07-18T15:00:00Z")).toContain("Abierto ahora");
+    expect(await statusAt("2026-07-18T19:00:00Z")).toContain("Cerrado ahora");
   });
 
   it("uses aggregate rating as the review fallback", async () => {
@@ -253,5 +244,37 @@ describe("published restaurant page", () => {
     expect(html).toContain("4.6 de 5 en Google");
     expect(html).toContain("Consulta las reseñas completas");
     expect(html).toContain("Ver todas las reseñas en Google Maps");
+  });
+
+  it("provides sized story actions and contrasting restaurant focus rings", () => {
+    const css = readFileSync(
+      new URL("../../globals.css", import.meta.url),
+      "utf8",
+    );
+    expect(css).toMatch(
+      /\.story-actions > a\s*{[^}]*min-width: 44px;[^}]*min-height: 44px;/s,
+    );
+    expect(css).toMatch(
+      /\.restaurant-page :focus-visible\s*{[^}]*outline: 3px solid var\(--paper\);[^}]*box-shadow: 0 0 0 8px var\(--ink\);/s,
+    );
+
+    const luminance = (hex: string) => {
+      const channels = hex
+        .match(/[\da-f]{2}/gi)
+        ?.map((value) => Number.parseInt(value, 16) / 255);
+      if (!channels) throw new Error(`Invalid color: ${hex}`);
+      const [red, green, blue] = channels.map((value) =>
+        value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+      );
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const contrast = (first: string, second: string) => {
+      const lighter = Math.max(luminance(first), luminance(second));
+      const darker = Math.min(luminance(first), luminance(second));
+      return (lighter + 0.05) / (darker + 0.05);
+    };
+
+    expect(contrast("#183a2d", "#f5f0df")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#fffdf5", "#183a2d")).toBeGreaterThanOrEqual(3);
   });
 });

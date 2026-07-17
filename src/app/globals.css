@@ -215,6 +215,12 @@ input {
   outline-offset: 3px;
 }
 
+.restaurant-page :focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 8px var(--ink);
+}
+
 .error {
   color: #a62e20;
   font-weight: 700;
@@ -539,9 +545,15 @@ input {
   display: flex;
   grid-column: 2;
   gap: 28px;
-  min-height: 44px;
   align-items: center;
   font-weight: 900;
+}
+
+.story-actions > a {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
 }
 
 .gallery-grid,
