@@ -47,6 +47,14 @@ The exact server-only environment contract is:
 All four are validated together at the server boundary. No variable is prefixed
 with `NEXT_PUBLIC_`.
 
+There are no environment overrides for domains, model IDs, actor inputs,
+timeouts, retry counts, rate limits, lease durations, media limits, or paid-call
+budgets. Those operational constraints are typed server-side constants so a
+deployment cannot silently widen them. Production prerequisites are a Bun
+runtime supported by Next.js 16, a migrated Neon Postgres database, a Vercel
+Blob store, an Apify account authorized for the pinned actor, an AI Gateway
+configuration, and wildcard DNS/TLS for `*.limon.lat` plus apex and `www`.
+
 ## Commands
 
 | Command | Purpose |
@@ -113,6 +121,66 @@ The deployed limiter trusts only Vercel's overwritten
 Automated tests exercise the coordinator through persisted state transitions
 and rendered Spanish output. Test setup replaces global `fetch` with a function
 that throws, so adding an accidental paid network call fails the suite.
+
+## Routing and Search Discovery
+
+Next.js 16's `src/proxy.ts` host boundary implements production routing.
+`limon.lat` serves the marketing application and `www.limon.lat` permanently
+redirects to the equivalent apex URL. A valid first-level host such as
+`las-palmeras.limon.lat` rewrites only its root request to the stored
+`/r/las-palmeras` page; a non-root URL permanently redirects to that tenant
+root. Nested, malformed, or conflicting forwarded production authorities fail
+closed. Localhost and Vercel preview hosts continue to use `/r/:slug` directly.
+
+The proxy matcher excludes API routes, Next.js internals and image optimization,
+favicon, robots, sitemap, and extension-bearing static assets. Restaurant
+metadata always names `https://:slug.limon.lat/` as canonical and sets
+`noindex, nofollow`; generation pages do the same. The sitemap contains only
+the apex marketing page, and robots excludes generation and stored restaurant
+paths from discovery.
+
+## Reliability and Provider Fallback
+
+Generation rows use fenced leases so one worker owns a claim and stale workers
+cannot publish. The normalized provider result is checkpointed before media or
+optional AI work; retries therefore reuse paid import data rather than invoking
+Apify again. Public Maps preview data is accepted only when its narrow fixture-
+locked schema validates. Otherwise the live composition may fall back to the
+bounded Apify adapter; if neither source yields valid data, the user receives a
+sanitized failure state.
+
+Media retention is limited to three provider-ranked place photos and uses
+deterministic Blob paths. Redirect, host, type, size, timeout, and concurrency
+checks happen before publication; individual failures degrade to fewer or no
+photos. Optional menu extraction runs after publication through AI Gateway,
+uses retained place images only, and can publish a referential menu, record no
+menu, or fail without making the restaurant page unavailable.
+
+## Verification and Authorized Live Debugging
+
+Run `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun run test`,
+and `bun run build` before release. Automated checks are deterministic: fetch is
+disabled by default and providers, Blob writes, and AI execution are injected
+fixtures. They must never be run in a mode that enables paid calls.
+
+A live Las Palmeras smoke is exceptional, manually authorized, and must only be
+attempted when all four local credentials are already available. Use exactly one
+submission and the code-defined budgets: one place, at most three reviews and
+three photos, a 40-second actor timeout, a 45-second client timeout, and a USD
+0.50 Apify ceiling. Verify the provider checkpoint, retained Blob URLs, optional
+AI outcome, publication, duplicate reuse, and repeated stored-data-only page
+loads. Do not deploy, change DNS, broaden limits, expose credential values, or
+repeat a paid run to manufacture evidence. If credentials or an external
+service are unavailable, record that limitation and complete all deterministic
+checks instead.
+
+## POC Legal Boundaries
+
+Limon is a proof of concept built from public-source information. It does not
+establish restaurant ownership, permission to publish, correctness, licensing,
+privacy compliance, media or AI-processing rights, retention consent, or an
+operational correction/takedown process. These are production launch blockers,
+not assurances made by the software.
 
 ### Live provider boundary
 

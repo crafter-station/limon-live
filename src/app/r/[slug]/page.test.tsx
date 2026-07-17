@@ -14,7 +14,7 @@ vi.mock("@/server/db/generation-repository", () => ({
   },
 }));
 
-import PublishedRestaurantPage, { metadata } from "./page";
+import PublishedRestaurantPage, { generateMetadata } from "./page";
 
 describe("published restaurant page", () => {
   beforeEach(() => {
@@ -75,9 +75,15 @@ describe("published restaurant page", () => {
     expect(html).not.toContain("<iframe");
     expect(html).toContain("Mapa no disponible");
     expect(html).toContain("restaurant-hero-fallback");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "las-palmeras" }),
+    });
     expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(metadata.title).toBe("Restaurante en Perú | Limon");
     expect(metadata.description).toContain("Información pública");
+    expect(metadata.alternates?.canonical).toBe(
+      "https://las-palmeras.limon.lat/",
+    );
   });
 
   it("keeps legacy immutable publications readable", async () => {
@@ -188,7 +194,8 @@ describe("published restaurant page", () => {
     expect(html).toContain("q=-12.1211,-77.0297");
     expect(html).toContain('loading="eager"');
     expect(html).toContain("Ver todas las reseñas en Google Maps");
-    expect(html).toContain("limon.live/r/las-palmeras");
+    expect(html).toContain("https://las-palmeras.limon.lat/");
+    expect(html).toContain("las-palmeras.limon.lat");
     expect(html).toContain("Made with limon");
     expect(html).toContain("no es su sitio oficial");
   });

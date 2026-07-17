@@ -15,6 +15,8 @@ import {
 } from "./types";
 
 const LEASE_DURATION_MS = 60_000;
+const DNS_LABEL_MAX_LENGTH = 63;
+const SLUG_SUFFIX_LENGTH = 11;
 
 export function restaurantSlug(name: string, normalizedSource: string) {
   const readable = foldText(name)
@@ -24,7 +26,11 @@ export function restaurantSlug(name: string, normalizedSource: string) {
     .update(normalizedSource)
     .digest("hex")
     .slice(0, 10);
-  return `${readable || "restaurante"}-${venueId}`;
+  const prefix = (readable || "restaurante").slice(
+    0,
+    DNS_LABEL_MAX_LENGTH - SLUG_SUFFIX_LENGTH,
+  );
+  return `${prefix}-${venueId}`;
 }
 
 export type SubmissionResult =

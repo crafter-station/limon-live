@@ -4,12 +4,20 @@ import { RestaurantSite } from "@/components/restaurant-site";
 import { storedRestaurantSchema } from "@/domain/restaurant";
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 
-export const metadata: Metadata = {
-  title: "Restaurante en Perú | Limon",
-  description:
-    "Información pública de un restaurante en Perú, presentada por Limon.",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  return {
+    title: "Restaurante en Perú | Limon",
+    description:
+      "Información pública de un restaurante en Perú, presentada por Limon.",
+    alternates: { canonical: `https://${slug}.limon.lat/` },
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PublishedRestaurantPage({
   params,
