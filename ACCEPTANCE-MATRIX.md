@@ -10,7 +10,7 @@
 | Exact environment | `src/server/env-schema.ts` and typed constants | exactly four secrets cross the environment boundary | missing/extra public values cannot enter parsed config | env schema test and repository search | limits/models/retries/domains are code, not env knobs |
 | Deterministic automation | injected providers and global fetch guard | full suite uses fixtures/mocks | accidental network access throws | test suite and production build | no paid calls in automated checks |
 | Release documentation | `README.md` | setup, architecture, routing and operations documented | unavailable providers have explicit fallback/limitations | documentation review | POC does not resolve legal ownership/rights |
-| Visual/accessibility | existing UI and browser walkthrough | marketing at mobile/desktop, keyboard focus, semantic status, and reduced motion | database-backed live failure at mobile/desktop; deterministic tests cover delayed, sparse/complete, and menu/no-menu states | agent-browser evidence outside repository and full test suite | no redesign in this routing issue |
+| Visual/accessibility | real `GenerationProgress` and `RestaurantSite` components in a credential-free fixture harness | marketing, generation, delayed, complete/sparse, and menu/no-menu states at mobile/desktop; keyboard focus, semantic status, and reduced motion | failure at mobile/desktop, including the database-backed bounded-smoke failure | inspected agent-browser captures listed below and full test suite | no redesign in this routing issue |
 | Authorized live smoke | existing code-defined provider/media/AI budgets | one Las Palmeras submission created generation `fb59f360-6ded-4ef0-88d6-f6aecc3c7860` | the bounded first provider attempt failed safely before checkpointing; no manual retry was made | public flow plus sanitized persisted-record query | no deployment, DNS change, secret output, or repeated paid run |
 
 ## Commit Milestones
@@ -18,6 +18,38 @@
 1. `feat(routing)`: installed proxy convention, canonical/discovery metadata, and request-level tests.
 2. `docs(release)`: exact release and operational documentation plus finalized acceptance evidence.
 3. Focused `fix` or `test` commits only if self-review finds a coherent defect.
+
+## Visual Evidence
+
+The credential-free harness at `/private/tmp/limon-issue9-visual-harness`
+imports the production `GenerationProgress` and `RestaurantSite` components
+and supplies in-memory props only. Every capture below was visually inspected
+as the intended real component/state with no Next.js error overlay. The delayed
+captures came from a webpack production build/start and the component's real
+30-second timer, not copied markup, a shortened clock, or hot-reloaded state.
+
+| State | Harness path | Desktop evidence | Mobile evidence |
+| --- | --- | --- | --- |
+| Marketing | repository `/` | `/private/tmp/limon-issue9-marketing-desktop.png` (1280x1593) | `/private/tmp/limon-issue9-marketing-mobile.png` (390x2815) |
+| Generation in progress | `/?state=generation` | `/private/tmp/limon-issue9-visual-evidence/generation-desktop.png` (1440x1000) | `/private/tmp/limon-issue9-visual-evidence/generation-mobile.png` (390x844) |
+| Delayed work | `/?state=delayed`, after the real 30-second threshold | `/private/tmp/limon-issue9-visual-evidence/delayed-desktop.png` (1440x1000) | `/private/tmp/limon-issue9-visual-evidence/delayed-mobile.png` (390x844) |
+| Failure | `/?state=failure` | `/private/tmp/limon-issue9-visual-evidence/failure-desktop.png` (1440x1000) | `/private/tmp/limon-issue9-visual-evidence/failure-mobile.png` (390x844) |
+| Complete restaurant | `/?state=complete` | `/private/tmp/limon-issue9-visual-evidence/complete-desktop.png` (1440x3100) | `/private/tmp/limon-issue9-visual-evidence/complete-mobile.png` (390x3021) |
+| Sparse restaurant | `/?state=sparse` | `/private/tmp/limon-issue9-visual-evidence/sparse-desktop.png` (1440x2412) | `/private/tmp/limon-issue9-visual-evidence/sparse-mobile.png` (390x2267) |
+| Referential menu | `/?state=menu` | `/private/tmp/limon-issue9-visual-evidence/menu-desktop.png` (1440x3819) | `/private/tmp/limon-issue9-visual-evidence/menu-mobile.png` (390x3614) |
+| No menu | `/?state=no-menu` | `/private/tmp/limon-issue9-visual-evidence/no-menu-desktop.png` (1440x3100) | `/private/tmp/limon-issue9-visual-evidence/no-menu-mobile.png` (390x3021) |
+
+Accessibility evidence uses the same real components. The generation snapshot
+exposed a `status` containing the `Generation progress` labeled list. The
+delayed production snapshot exposed a `status` containing "This is taking
+longer than usual", `Resume`, and `Use another link`. The failure snapshot
+exposed an `alert`, `Try again` button, and `Use another link`. From
+`/?state=complete`, one keyboard `Tab` focused
+`<a class="wordmark" href="/">Limon</a>`. Reduced-motion emulation returned
+`true` for `matchMedia('(prefers-reduced-motion: reduce)').matches`; the
+inspected captures are `/private/tmp/limon-issue9-marketing-reduced-motion.png`
+and `/private/tmp/limon-issue9-visual-evidence/menu-mobile-reduced-motion.png`
+(390x3614).
 
 ## Live Evidence
 
