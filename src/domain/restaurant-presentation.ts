@@ -28,6 +28,7 @@ function parseRanges(value: string): Range[] | null {
     const [, startHour, startMinute, endHour, endMinute] = match.map(Number);
     if (startHour > 23 || endHour > 23 || startMinute > 59 || endMinute > 59)
       return null;
+    if (startHour === endHour && startMinute === endMinute) return null;
     return {
       start: startHour * 60 + startMinute,
       end: endHour * 60 + endMinute,

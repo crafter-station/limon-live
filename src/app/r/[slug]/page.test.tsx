@@ -18,6 +18,7 @@ import PublishedRestaurantPage, { metadata } from "./page";
 describe("published restaurant page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("renders a sparse stored page without invoking the provider", async () => {
@@ -137,6 +138,18 @@ describe("published restaurant page", () => {
             rating: 4,
             publishedAt: "2026-06-01T00:00:00.000Z",
           },
+          {
+            author: "Rosa Díaz",
+            text: "Sabores memorables.",
+            rating: 5,
+            publishedAt: "2026-04-01T00:00:00.000Z",
+          },
+          {
+            author: "Mario Sol",
+            text: "Esta cuarta reseña no se muestra.",
+            rating: 3,
+            publishedAt: "2026-03-01T00:00:00.000Z",
+          },
         ],
         website: "https://restaurant.example/menu",
         hours: [{ day: "lunes", hours: "09:00-18:00" }],
@@ -163,6 +176,10 @@ describe("published restaurant page", () => {
       html.indexOf("Excelente comida."),
     );
     expect(html).not.toContain("googleusercontent.com/avatar");
+    expect(html).toContain(`href="tel:${data.phone}"`);
+    expect(html).toContain("Llamar");
+    expect(html).toContain("Sabores memorables.");
+    expect(html).not.toContain("Esta cuarta reseña no se muestra.");
     expect(html).toContain("Sitio oficial");
     expect(html).toContain("nofollow noopener noreferrer");
     expect(html).toContain("Horarios publicados");
@@ -173,6 +190,51 @@ describe("published restaurant page", () => {
     expect(html).toContain("limon.live/r/las-palmeras");
     expect(html).toContain("Made with limon");
     expect(html).toContain("no es su sitio oficial");
+  });
+
+  it("renders exact and overnight opening boundaries in Lima time", async () => {
+    const data = await new FixtureRestaurantProvider().load(
+      FIXTURE_NORMALIZED_SOURCE,
+    );
+    findReadyBySlug.mockResolvedValue({
+      publishedData: {
+        ...data,
+        hours: [
+          { day: "domingo", hours: "cerrado" },
+          { day: "lunes", hours: "cerrado" },
+          { day: "martes", hours: "cerrado" },
+          { day: "miércoles", hours: "cerrado" },
+          { day: "jueves", hours: "cerrado" },
+          { day: "viernes", hours: "18:00-02:00" },
+          { day: "sábado", hours: "10:00-14:00" },
+        ],
+      },
+    });
+    vi.useFakeTimers();
+
+    const statusAt = async (instant: string) => {
+      vi.setSystemTime(new Date(instant));
+      const page = await PublishedRestaurantPage({
+        params: Promise.resolve({ slug: "las-palmeras" }),
+      });
+      return renderToStaticMarkup(page);
+    };
+
+    expect(await statusAt("2026-07-17T23:00:00Z")).toContain(
+      "Abierto ahora",
+    );
+    expect(await statusAt("2026-07-18T06:59:00Z")).toContain(
+      "Abierto ahora",
+    );
+    expect(await statusAt("2026-07-18T07:00:00Z")).toContain(
+      "Cerrado ahora",
+    );
+    expect(await statusAt("2026-07-18T15:00:00Z")).toContain(
+      "Abierto ahora",
+    );
+    expect(await statusAt("2026-07-18T19:00:00Z")).toContain(
+      "Cerrado ahora",
+    );
   });
 
   it("uses aggregate rating as the review fallback", async () => {

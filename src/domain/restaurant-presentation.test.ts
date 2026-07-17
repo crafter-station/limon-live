@@ -54,6 +54,17 @@ describe("restaurant presentation", () => {
     ).toBeNull();
     expect(openingStatus([{ day: "lunes", hours: "09:00-17:00" }])).toBeNull();
     expect(openingStatus([{ day: "quizá", hours: "09:00-17:00" }])).toBeNull();
+    expect(
+      openingStatus([
+        { day: "domingo", hours: "00:00-00:00" },
+        { day: "lunes", hours: "00:00-00:00" },
+        { day: "martes", hours: "00:00-00:00" },
+        { day: "miércoles", hours: "00:00-00:00" },
+        { day: "jueves", hours: "00:00-00:00" },
+        { day: "viernes", hours: "00:00-00:00" },
+        { day: "sábado", hours: "00:00-00:00" },
+      ]),
+    ).toBeNull();
     expect(safeWebsite("javascript:alert(1)")).toBeNull();
     expect(safeWebsite("https://user:pass@example.com")).toBeNull();
     expect(safeWebsite("https://example.com/menu")).toBe(
