@@ -67,4 +67,38 @@ describe("MenuExtractor", () => {
     await Promise.all(pending);
     expect(peak).toBe(MENU_CONCURRENCY);
   });
+
+  it("retries one transient fake failure", async () => {
+    const execute = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("transient"))
+      .mockResolvedValueOnce({ kind: "no_menu", reason: "unreadable" });
+    const extractor = new MenuExtractor(execute, {
+      timeoutMs: 100,
+      maxRetries: 1,
+    });
+    await expect(extractor.extract([photo(0)])).resolves.toBeNull();
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it("aborts delayed fake attempts at the timeout bound", async () => {
+    const execute = vi.fn(
+      async (
+        _photos: readonly ReturnType<typeof photo>[],
+        signal: AbortSignal,
+      ) =>
+        new Promise<never>((_, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          }),
+        ),
+    );
+    const extractor = new MenuExtractor(execute, {
+      timeoutMs: 5,
+      maxRetries: 1,
+    });
+    await expect(extractor.extract([photo(0)])).rejects.toThrow("timed out");
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute.mock.calls.every((call) => call[1].aborted)).toBe(true);
+  });
 });
