@@ -1,12 +1,12 @@
 import "server-only";
 import { createGateway, generateText, Output } from "ai";
-import type { NormalizedRestaurant } from "@/domain/restaurant";
 import {
   type Menu,
   type MenuExtraction,
   menuExtractionSchema,
   validateGroundedMenu,
 } from "@/domain/menu";
+import type { NormalizedRestaurant } from "@/domain/restaurant";
 
 export const MENU_MODEL_ID = "google/gemini-2.5-flash-lite" as const;
 export const MENU_CANDIDATE_LIMIT = 3 as const;

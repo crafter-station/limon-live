@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import type { NormalizedRestaurant } from "@/domain/restaurant";
 import {
   GENERATION_FAILURE_MESSAGE,
   type Generation,
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
 } from "@/domain/generation/types";
+import type { Menu } from "@/domain/menu";
+import type { NormalizedRestaurant } from "@/domain/restaurant";
 
 export class MemoryGenerationRepository implements GenerationRepository {
   private readonly records = new Map<string, Generation>();
@@ -34,6 +35,9 @@ export class MemoryGenerationRepository implements GenerationRepository {
       status: "pending",
       providerCheckpoint: null,
       publishedData: null,
+      menuStatus: "pending",
+      menuData: null,
+      menuSafeError: null,
       slug: null,
       safeError: null,
       leaseToken: null,
@@ -147,5 +151,23 @@ export class MemoryGenerationRepository implements GenerationRepository {
       leaseAcquiredAt: null,
       updatedAt: now,
     });
+  }
+
+  async saveMenuOutcome(
+    id: string,
+    status: "published" | "none" | "failed",
+    menu: Menu | null,
+    safeError: string | null,
+    now: Date,
+  ) {
+    const record = this.records.get(id);
+    if (record?.status !== "ready") return false;
+    Object.assign(record, {
+      menuStatus: status,
+      menuData: menu ? structuredClone(menu) : null,
+      menuSafeError: safeError,
+      updatedAt: now,
+    });
+    return true;
   }
 }

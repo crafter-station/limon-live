@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { MenuExtractor, MENU_CANDIDATE_LIMIT } from "./menu-extractor";
+import { MENU_CANDIDATE_LIMIT, MenuExtractor } from "./menu-extractor";
 
-const photo = (index: number) => ({
+const photo = (
+  index: number,
+): { url: string; alt: string; attribution: string | null } => ({
   url: `https://store.public.blob.vercel-storage.com/${index}.jpg`,
   alt: `Place photo ${index}`,
   attribution: null,

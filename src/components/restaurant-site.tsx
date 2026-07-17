@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Menu } from "@/domain/menu";
 import type { StoredRestaurant } from "@/domain/restaurant";
 import {
   openingStatus,
@@ -10,9 +11,11 @@ import {
 export function RestaurantSite({
   restaurant,
   slug,
+  menu = null,
 }: {
   restaurant: StoredRestaurant;
   slug?: string;
+  menu?: Menu | null;
 }) {
   const importedDate = new Intl.DateTimeFormat("es-PE", {
     dateStyle: "long",
@@ -113,6 +116,63 @@ export function RestaurantSite({
                   <figcaption>Foto: {photo.attribution}</figcaption>
                 ) : null}
               </figure>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {menu ? (
+        <section className="menu-section" aria-labelledby="menu-title">
+          <p className="eyebrow">Menú referencial</p>
+          <h2 id="menu-title">Una mirada a la carta</h2>
+          <p className="menu-warning">
+            Extraído automáticamente de fotos públicas, sin revisión del
+            restaurante. Los platos, precios y disponibilidad pueden haber
+            cambiado.
+          </p>
+          <div className="menu-grid">
+            {menu.sections.map((section, sectionIndex) => (
+              <article key={`${section.name ?? "sección"}-${sectionIndex}`}>
+                {section.name ? <h3>{section.name}</h3> : null}
+                <ul>
+                  {section.items.map((item, itemIndex) => (
+                    <li key={`${item.name}-${itemIndex}`}>
+                      <div className="menu-item-heading">
+                        <strong>{item.name}</strong>
+                        {item.price ? (
+                          <span>
+                            {item.price.label ? `${item.price.label} · ` : ""}
+                            {new Intl.NumberFormat("es-PE", {
+                              style: "currency",
+                              currency: "PEN",
+                            }).format(Number(item.price.amount))}
+                          </span>
+                        ) : null}
+                      </div>
+                      {item.description ? <p>{item.description}</p> : null}
+                      {item.variants.length ? (
+                        <dl>
+                          {item.variants.map((variant) => (
+                            <div
+                              key={`${variant.name}-${variant.price.amount}`}
+                            >
+                              <dt>{variant.name}</dt>
+                              <dd>
+                                {variant.price.label
+                                  ? `${variant.price.label} · `
+                                  : ""}
+                                {new Intl.NumberFormat("es-PE", {
+                                  style: "currency",
+                                  currency: "PEN",
+                                }).format(Number(variant.price.amount))}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </article>
             ))}
           </div>
         </section>

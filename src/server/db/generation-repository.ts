@@ -2,13 +2,14 @@ import "server-only";
 import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core/session";
-import type { NormalizedRestaurant } from "@/domain/restaurant";
 import {
   GENERATION_FAILURE_MESSAGE,
   type Generation,
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
 } from "@/domain/generation/types";
+import type { Menu } from "@/domain/menu";
+import type { NormalizedRestaurant } from "@/domain/restaurant";
 import { getDatabase } from "./client";
 import * as schema from "./schema";
 
@@ -192,5 +193,30 @@ export class DrizzleGenerationRepository implements GenerationRepository {
           eq(restaurantGenerations.leaseToken, leaseToken),
         ),
       );
+  }
+
+  async saveMenuOutcome(
+    id: string,
+    status: "published" | "none" | "failed",
+    menu: Menu | null,
+    safeError: string | null,
+    now: Date,
+  ): Promise<boolean> {
+    const [updated] = await this.database
+      .update(restaurantGenerations)
+      .set({
+        menuStatus: status,
+        menuData: menu,
+        menuSafeError: safeError,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(restaurantGenerations.id, id),
+          eq(restaurantGenerations.status, "ready"),
+        ),
+      )
+      .returning({ id: restaurantGenerations.id });
+    return Boolean(updated);
   }
 }

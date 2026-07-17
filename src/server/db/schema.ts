@@ -5,12 +5,13 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
   varchar,
-  primaryKey,
 } from "drizzle-orm/pg-core";
+import type { Menu } from "@/domain/menu";
 import type { NormalizedRestaurant } from "@/domain/restaurant";
 
 export const generationStatus = pgEnum("generation_status", [
@@ -31,6 +32,12 @@ export const restaurantGenerations = pgTable(
       "provider_checkpoint",
     ).$type<NormalizedRestaurant | null>(),
     publishedData: jsonb("published_data").$type<NormalizedRestaurant | null>(),
+    menuStatus: varchar("menu_status", { length: 16 })
+      .$type<"pending" | "published" | "none" | "failed">()
+      .notNull()
+      .default("pending"),
+    menuData: jsonb("menu_data").$type<Menu | null>(),
+    menuSafeError: varchar("menu_safe_error", { length: 240 }),
     slug: text("slug").unique(),
     safeError: varchar("safe_error", { length: 240 }),
     leaseToken: uuid("lease_token"),

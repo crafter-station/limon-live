@@ -24,5 +24,11 @@ export default async function PublishedRestaurantPage({
   if (!generation?.publishedData) notFound();
 
   const restaurant = storedRestaurantSchema.parse(generation.publishedData);
-  return <RestaurantSite restaurant={restaurant} slug={slug} />;
+  return (
+    <RestaurantSite
+      restaurant={restaurant}
+      slug={slug}
+      menu={generation.menuStatus === "published" ? generation.menuData : null}
+    />
+  );
 }
