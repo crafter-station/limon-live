@@ -91,6 +91,14 @@ export function validateGroundedMenu(
   if (candidate.kind === "no_menu") return null;
 
   for (const section of candidate.sections) {
+    if (
+      section.name !== null &&
+      !section.items.some((item) =>
+        item.visibleText.includes(section.name ?? ""),
+      )
+    ) {
+      return null;
+    }
     for (const item of section.items) {
       if (
         item.sourceImage >= candidateCount ||

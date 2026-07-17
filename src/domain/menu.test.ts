@@ -25,7 +25,8 @@ const valid = {
               },
             },
           ],
-          visibleText: "Ceviche clásico Personal S/ 29.90 Fuente PEN 49",
+          visibleText:
+            "Ceviches Ceviche clásico Personal S/ 29.90 Fuente PEN 49",
           sourceImage: 0,
         },
       ],
@@ -104,6 +105,18 @@ describe("menu validation", () => {
               items: [{ ...valid.sections[0].items[0], sourceImage: 1 }],
             },
           ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects an invented section name", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          ...valid,
+          sections: [{ ...valid.sections[0], name: "Especiales inventados" }],
         }),
         1,
       ),
