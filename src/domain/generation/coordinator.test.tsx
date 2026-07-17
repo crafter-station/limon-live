@@ -296,6 +296,55 @@ describe("fixture generation golden path", () => {
     expect(persisted?.status).toBe("failed");
     expect(persisted?.safeError).not.toContain("upstream");
   });
+
+  it.each([
+    ["published", { sections: [] }, false],
+    ["none", null, false],
+    ["extractor failure", null, true],
+    ["outcome-save failure", { sections: [] }, false],
+  ] as const)(
+    "keeps the primary publication ready after %s",
+    async (scenario, menu, extractorThrows) => {
+      const repository = new MemoryGenerationRepository();
+      if (scenario === "outcome-save failure") {
+        vi.spyOn(repository, "saveMenuOutcome").mockRejectedValue(
+          new Error("database unavailable"),
+        );
+      }
+      const extract = vi.fn(async () => {
+        if (extractorThrows) throw new Error("AI unavailable");
+        return menu === null ? null : { sections: [] };
+      });
+      const coordinator = new GenerationCoordinator(
+        repository,
+        new FixtureRestaurantProvider(),
+        undefined,
+        {
+          retain: async (_id, data) => ({
+            ...data,
+            photos: [
+              {
+                url: "https://store.public.blob.vercel-storage.com/menu.jpg",
+                alt: "Place photo",
+                attribution: null,
+              },
+            ],
+          }),
+        },
+        { extract },
+      );
+      const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+      if (submission.kind !== "generation")
+        throw new Error("Expected generation");
+      await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+        kind: "ready",
+      });
+      expect(await repository.findById(submission.id)).toMatchObject({
+        status: "ready",
+        publishedData: { name: "Restaurante Las Palmeras" },
+      });
+    },
+  );
 });
 
 generationRepositoryContract("memory generation repository", async () => {
