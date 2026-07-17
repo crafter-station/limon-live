@@ -22,6 +22,17 @@ describe("fixture generation golden path", () => {
       restaurantSlug("Casa Sol", "https://maps.google.com/place/one"),
     ).toBe(restaurantSlug("Casa Sol", "https://maps.google.com/place/one"));
   });
+
+  it.each([
+    "Restaurante con un nombre extraordinariamente largo que excede una etiqueta DNS completa",
+    "ÁÉÍÓÚ Ñandú — ¡Sabores, tradición y corazón! ".repeat(4),
+  ])("creates a bounded DNS label for %s", (name) => {
+    const slug = restaurantSlug(name, FIXTURE_MAPS_URL);
+
+    expect(slug).toHaveLength(63);
+    expect(slug).toMatch(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])$/);
+    expect(slug).toMatch(/-[a-f0-9]{10}$/);
+  });
   it("persists and reuses equivalent pending submissions", async () => {
     const repository = new MemoryGenerationRepository();
     const coordinator = new GenerationCoordinator(

@@ -4,20 +4,38 @@ import { NextResponse } from "next/server";
 const PRODUCTION_DOMAIN = "limon.lat";
 const TENANT_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-function authorityHost(value: string | null): string | null {
-  if (!value || value.includes(",") || value.includes("@")) return null;
+function authorityHost(value: string | null): string | null | undefined {
+  if (value === null) return undefined;
+  if (!value || value !== value.trim() || /[,/@\\?#]/.test(value)) return null;
   try {
-    return new URL(`http://${value}`).hostname.toLowerCase().replace(/\.$/, "");
+    const authority = new URL(`http://${value}`);
+    if (
+      authority.username ||
+      authority.password ||
+      authority.pathname !== "/" ||
+      authority.search ||
+      authority.hash
+    ) {
+      return null;
+    }
+    return authority.hostname.toLowerCase().replace(/\.$/, "");
   } catch {
     return null;
   }
 }
 
 export function proxy(request: NextRequest) {
-  const host =
-    authorityHost(request.headers.get("host")) ?? request.nextUrl.hostname;
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwarded = forwardedHost ? authorityHost(forwardedHost) : host;
+  const hostAuthority = authorityHost(request.headers.get("host"));
+  const forwardedAuthority = authorityHost(
+    request.headers.get("x-forwarded-host"),
+  );
+
+  if (hostAuthority === null || forwardedAuthority === null) {
+    return new NextResponse("Invalid host", { status: 400 });
+  }
+
+  const host = hostAuthority ?? request.nextUrl.hostname.toLowerCase();
+  const forwarded = forwardedAuthority ?? host;
 
   if (!host || !forwarded || host !== forwarded) {
     return new NextResponse("Invalid host", { status: 400 });
