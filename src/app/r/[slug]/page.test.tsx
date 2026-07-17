@@ -246,6 +246,58 @@ describe("published restaurant page", () => {
     expect(html).toContain("Ver todas las reseñas en Google Maps");
   });
 
+  it("renders referential menu variants, null details, and PEN and omits no-menu outcomes", async () => {
+    const data = await new FixtureRestaurantProvider().load(
+      FIXTURE_NORMALIZED_SOURCE,
+    );
+    findReadyBySlug.mockResolvedValue({
+      publishedData: data,
+      menuStatus: "published",
+      menuData: {
+        sections: [
+          {
+            name: null,
+            items: [
+              {
+                name: "Ceviche clásico",
+                description: null,
+                price: null,
+                variants: [
+                  {
+                    name: "Fuente",
+                    price: { label: "Grande", amount: "49.5", currency: "PEN" },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const html = renderToStaticMarkup(
+      await PublishedRestaurantPage({
+        params: Promise.resolve({ slug: "las-palmeras" }),
+      }),
+    );
+    expect(html).toContain("Menú referencial");
+    expect(html).toContain("sin revisión del restaurante");
+    expect(html).toContain("Ceviche clásico");
+    expect(html).toContain("Fuente");
+    expect(html).toMatch(/Grande · S\/\.?\s*49[,.]50/);
+
+    findReadyBySlug.mockResolvedValue({
+      publishedData: data,
+      menuStatus: "none",
+      menuData: null,
+    });
+    const withoutMenu = renderToStaticMarkup(
+      await PublishedRestaurantPage({
+        params: Promise.resolve({ slug: "las-palmeras" }),
+      }),
+    );
+    expect(withoutMenu).not.toContain("Menú referencial");
+  });
+
   it("provides sized story actions and contrasting restaurant focus rings", () => {
     const css = readFileSync(
       new URL("../../globals.css", import.meta.url),

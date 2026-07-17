@@ -87,6 +87,17 @@ photos, and review-attached imagery are never normalized, retained, or
 rendered. Automated media tests inject fake fetch and Blob writers and perform
 no paid network or Blob calls.
 
+After primary publication, Limon may send at most three retained place-photo
+URLs to the configured model through Vercel AI Gateway to look for a visible
+menu. This external image processing is optional and best effort: it runs only
+after the restaurant page is ready, is not reviewed by a human or verified by
+the restaurant, and cannot make primary publication fail. A published menu is
+explicitly referential. Model output can be incomplete or wrong even though
+Limon validates its structure and requires item fields and section names to
+occur in model-provided visible-text evidence; that transcription is not
+cryptographic proof of what the pixels contain. Automated tests inject the AI
+executor and make no Gateway calls.
+
 The anonymous generation UUID is a non-enumerable capability: anyone holding a
 generation URL may advance that record, while malformed identifiers are rejected
 before they reach Postgres. This is intentional for the account-free tracer
@@ -129,3 +140,5 @@ release cadence; keep `LiveRestaurantProvider` as the reconciliation boundary.
   is otherwise suitable.
 - Photo consent, personal-image privacy, storage and retention policy,
   attribution sufficiency, licensing, and publication rights remain unresolved.
+- Rights to process retained photos with an external model and to publish menu
+  transcriptions remain unresolved; this documentation makes no legal claim.
