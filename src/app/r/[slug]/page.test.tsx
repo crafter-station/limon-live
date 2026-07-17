@@ -27,7 +27,8 @@ describe("published restaurant page", () => {
     const sparseData = {
       ...data,
       phone: null,
-      website: null,
+      website: "javascript:alert(1)",
+      location: null,
       hours: [],
       rating: null,
       reviewCount: null,
@@ -62,15 +63,20 @@ describe("published restaurant page", () => {
     expect(html).toContain(sparseData.description);
     expect(html).toContain(sparseData.city);
     expect(html).toContain(sparseData.address);
-    expect(html).toContain("Ver en Google Maps");
+    expect(html).toContain("Cómo llegar en Google Maps");
     expect(html).toContain(sparseData.mapsUrl);
     expect(html).toContain("Información importada el");
     expect(html).toContain("Fuente: Google Maps");
     expect(html).toContain("No verificado por el restaurante");
     expect(html).not.toContain("Llamar");
+    expect(html).not.toContain("Sitio oficial");
     expect(html).not.toContain("reseñas");
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain("Mapa no disponible");
     expect(html).toContain("restaurant-hero-fallback");
     expect(metadata.robots).toEqual({ index: false, follow: false });
+    expect(metadata.title).toBe("Restaurante en Perú | Limon");
+    expect(metadata.description).toContain("Información pública");
   });
 
   it("keeps legacy immutable publications readable", async () => {
@@ -123,9 +129,18 @@ describe("published restaurant page", () => {
             author: "Ana Pérez",
             text: "Excelente comida.",
             rating: 5,
+            publishedAt: "2026-05-01T00:00:00.000Z",
             profilePhotoUrl: "https://lh3.googleusercontent.com/avatar",
           },
+          {
+            author: "Luis Mora",
+            text: "Servicio atento.",
+            rating: 4,
+            publishedAt: "2026-06-01T00:00:00.000Z",
+          },
         ],
+        website: "https://restaurant.example/menu",
+        hours: [{ day: "lunes", hours: "09:00-18:00" }],
       },
     });
 
@@ -145,6 +160,37 @@ describe("published restaurant page", () => {
     expect(html).not.toContain("/_next/image");
     expect(html).toContain("review-initials");
     expect(html).toContain("AP");
+    expect(html.indexOf("Servicio atento.")).toBeLessThan(
+      html.indexOf("Excelente comida."),
+    );
     expect(html).not.toContain("googleusercontent.com/avatar");
+    expect(html).toContain("Sitio oficial");
+    expect(html).toContain("nofollow noopener noreferrer");
+    expect(html).toContain("Horarios publicados");
+    expect(html).toContain("<iframe");
+    expect(html).toContain("q=-12.1211,-77.0297");
+    expect(html).toContain('loading="eager"');
+    expect(html).toContain("Ver todas las reseñas en Google Maps");
+    expect(html).toContain("limon.live/r/las-palmeras");
+    expect(html).toContain("Made with limon");
+    expect(html).toContain("no es su sitio oficial");
+  });
+
+  it("uses aggregate rating as the review fallback", async () => {
+    const data = await new FixtureRestaurantProvider().load(
+      FIXTURE_NORMALIZED_SOURCE,
+    );
+    findReadyBySlug.mockResolvedValue({
+      publishedData: { ...data, reviews: [] },
+    });
+
+    const page = await PublishedRestaurantPage({
+      params: Promise.resolve({ slug: "las-palmeras" }),
+    });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("4.6 de 5 en Google");
+    expect(html).toContain("Consulta las reseñas completas");
+    expect(html).toContain("Ver todas las reseñas en Google Maps");
   });
 });

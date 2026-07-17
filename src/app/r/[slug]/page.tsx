@@ -5,7 +5,9 @@ import { storedRestaurantSchema } from "@/domain/restaurant";
 import { DrizzleGenerationRepository } from "@/server/db/generation-repository";
 
 export const metadata: Metadata = {
-  title: "Restaurante generado por Limon",
+  title: "Restaurante en Perú | Limon",
+  description:
+    "Información pública de un restaurante en Perú, presentada por Limon.",
   robots: { index: false, follow: false },
 };
 
@@ -22,5 +24,5 @@ export default async function PublishedRestaurantPage({
   if (!generation?.publishedData) notFound();
 
   const restaurant = storedRestaurantSchema.parse(generation.publishedData);
-  return <RestaurantSite restaurant={restaurant} />;
+  return <RestaurantSite restaurant={restaurant} slug={slug} />;
 }
