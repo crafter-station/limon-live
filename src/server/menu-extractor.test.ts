@@ -61,9 +61,13 @@ describe("MenuExtractor", () => {
       extractor.extract([photo(index)]),
     );
     await vi.waitFor(() => expect(active).toBe(MENU_CONCURRENCY));
-    releases.splice(0).forEach((release) => release());
+    releases.splice(0).forEach((release) => {
+      release();
+    });
     await vi.waitFor(() => expect(releases.length).toBe(2));
-    releases.splice(0).forEach((release) => release());
+    releases.splice(0).forEach((release) => {
+      release();
+    });
     await Promise.all(pending);
     expect(peak).toBe(MENU_CONCURRENCY);
   });

@@ -119,16 +119,12 @@
         "restaurant_generations_normalized_source_unique": {
           "name": "restaurant_generations_normalized_source_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "normalized_source"
-          ]
+          "columns": ["normalized_source"]
         },
         "restaurant_generations_slug_unique": {
           "name": "restaurant_generations_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -180,10 +176,7 @@
       "compositePrimaryKeys": {
         "submission_rate_limits_requester_key_window_start_pk": {
           "name": "submission_rate_limits_requester_key_window_start_pk",
-          "columns": [
-            "requester_key",
-            "window_start"
-          ]
+          "columns": ["requester_key", "window_start"]
         }
       },
       "uniqueConstraints": {},
@@ -201,12 +194,7 @@
     "public.generation_status": {
       "name": "generation_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "generating",
-        "ready",
-        "failed"
-      ]
+      "values": ["pending", "generating", "ready", "failed"]
     }
   },
   "schemas": {},
