@@ -1,6 +1,6 @@
 import {
-  normalizedRestaurantSchema,
   type NormalizedRestaurant,
+  normalizedRestaurantSchema,
 } from "@/domain/restaurant";
 import {
   hasSameGoogleMapsPlaceIdentity,
@@ -141,6 +141,19 @@ export function normalizeRestaurant(
   const rawReviews = Array.isArray(value.reviews)
     ? value.reviews.slice(0, 3)
     : [];
+  const detailedPhotos = Array.isArray(value.images) ? value.images : [];
+  const rawPhotos = Array.isArray(value.imageUrls)
+    ? value.imageUrls.map((url) => {
+        const details = detailedPhotos.find((entry) => {
+          if (!entry || typeof entry !== "object") return false;
+          const item = entry as ProviderRecord;
+          return item.imageUrl === url || item.url === url;
+        });
+        return details && typeof details === "object"
+          ? { ...(details as ProviderRecord), imageUrl: url }
+          : url;
+      })
+    : detailedPhotos;
   return normalizedRestaurantSchema.parse({
     name,
     category,
@@ -171,6 +184,26 @@ export function normalizeRestaurant(
             },
           ]
         : [];
+    }),
+    photos: rawPhotos.slice(0, 3).flatMap((entry, index) => {
+      const item =
+        typeof entry === "string"
+          ? { imageUrl: entry }
+          : (entry as ProviderRecord);
+      const url = nonEmptyText(item.imageUrl ?? item.url);
+      if (!url) return [];
+      try {
+        new URL(url);
+      } catch {
+        return [];
+      }
+      return [
+        {
+          url,
+          alt: `Foto ${index + 1} de ${name}`,
+          attribution: nonEmptyText(item.attribution ?? item.authorName),
+        },
+      ];
     }),
     attribution: "Google Maps",
     mapsUrl,
@@ -250,7 +283,7 @@ export const APIFY_INPUT = (url: string) => ({
   maxImages: 3,
   scrapeContacts: false,
   scrapeDirectories: false,
-  scrapeImageAuthors: false,
+  scrapeImageAuthors: true,
   scrapePlaceDetailPage: true,
   enableCompetitorAnalysis: false,
   maxCompetitorsToAnalyze: 0,

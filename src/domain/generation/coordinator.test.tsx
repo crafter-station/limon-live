@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RestaurantSite } from "@/components/restaurant-site";
-import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
 import { generationRepositoryContract } from "@/test/generation-repository-contract";
+import { MemoryGenerationRepository } from "@/test/memory-generation-repository";
 import { GenerationCoordinator, restaurantSlug } from "./coordinator";
 import {
   FIXTURE_MAPS_URL,
@@ -194,6 +194,88 @@ describe("fixture generation golden path", () => {
       kind: "ready",
     });
     expect(paidFetch).toHaveBeenCalledOnce();
+  });
+
+  it("resumes a legacy paid checkpoint without photos", async () => {
+    const repository = new MemoryGenerationRepository();
+    const provider = new FixtureRestaurantProvider();
+    const load = vi.spyOn(provider, "load");
+    let now = new Date("2026-07-16T10:00:00.000Z");
+    const coordinator = new GenerationCoordinator(
+      repository,
+      provider,
+      () => now,
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+    repository.interruptNextPublication();
+    await coordinator.advance(submission.id);
+    repository.removeCheckpointPhotos(submission.id);
+    now = new Date("2026-07-16T10:02:00.000Z");
+
+    await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+      kind: "ready",
+    });
+    expect(load).toHaveBeenCalledOnce();
+    expect(
+      (await repository.findById(submission.id))?.publishedData?.photos,
+    ).toEqual([]);
+  });
+
+  it("reuses the paid checkpoint after media failure and publishes no hotlinks", async () => {
+    const repository = new MemoryGenerationRepository();
+    const provider = new FixtureRestaurantProvider();
+    const base = await provider.load(FIXTURE_MAPS_URL);
+    const load = vi.spyOn(provider, "load").mockResolvedValue({
+      ...base,
+      photos: [
+        {
+          url: "https://lh3.googleusercontent.com/temporary",
+          alt: "Foto del restaurante",
+          attribution: "Google Maps contributor",
+        },
+      ],
+    });
+    const retain = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("blob unavailable"))
+      .mockImplementationOnce(async (_id, data) => ({
+        ...data,
+        photos: [
+          {
+            ...data.photos[0],
+            url: "https://store.public.blob.vercel-storage.com/photo.jpg",
+          },
+        ],
+      }));
+    const coordinator = new GenerationCoordinator(
+      repository,
+      provider,
+      undefined,
+      { retain },
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+
+    await expect(coordinator.advance(submission.id)).rejects.toThrow();
+    await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+      kind: "ready",
+    });
+    const persisted = await repository.findById(submission.id);
+
+    expect(load).toHaveBeenCalledOnce();
+    expect(retain).toHaveBeenCalledTimes(2);
+    expect(persisted?.providerCheckpoint?.photos[0].url).toContain(
+      "googleusercontent.com",
+    );
+    expect(persisted?.publishedData?.photos[0].url).toContain(
+      "blob.vercel-storage.com",
+    );
+    expect(JSON.stringify(persisted?.publishedData)).not.toContain(
+      "googleusercontent.com",
+    );
   });
 
   it("persists only a safe error when a provider fails", async () => {

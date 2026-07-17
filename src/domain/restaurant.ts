@@ -13,6 +13,11 @@ const reviewsSchema = z.array(
     rating: z.number().min(0).max(5).nullable(),
   }),
 );
+const photoSchema = z.object({
+  url: z.url(),
+  alt: z.string().min(1),
+  attribution: z.string().min(1).nullable(),
+});
 
 const restaurantSourceSchema = z.enum([
   "google-maps-preview",
@@ -36,12 +41,18 @@ export const normalizedRestaurantSchema = z.object({
   rating: z.number().min(0).max(5).nullable(),
   reviewCount: z.number().int().nonnegative().nullable(),
   reviews: reviewsSchema,
+  photos: z.array(photoSchema).max(3),
   attribution: z.literal("Google Maps"),
   mapsUrl: z.url(),
   source: restaurantSourceSchema,
   diagnostics: diagnosticsSchema,
   importedAt: z.iso.datetime(),
 });
+
+export const providerCheckpointRestaurantSchema =
+  normalizedRestaurantSchema.extend({
+    photos: z.array(photoSchema).max(3).default([]),
+  });
 
 export type NormalizedRestaurant = z.infer<typeof normalizedRestaurantSchema>;
 
@@ -51,6 +62,7 @@ export const storedRestaurantSchema = normalizedRestaurantSchema.extend({
   location: locationSchema.nullable().default(null),
   hours: hoursSchema.default([]),
   reviews: reviewsSchema.default([]),
+  photos: z.array(photoSchema).max(3).default([]),
   attribution: z.literal("Google Maps").default("Google Maps"),
   source: restaurantSourceSchema.default("google-maps-preview"),
   diagnostics: diagnosticsSchema.default({ provider: "legacy", warnings: [] }),

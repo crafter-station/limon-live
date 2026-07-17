@@ -1,11 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
-import { normalizedRestaurantSchema } from "@/domain/restaurant";
+import {
+  normalizedRestaurantSchema,
+  providerCheckpointRestaurantSchema,
+} from "@/domain/restaurant";
 import { resolveGoogleMapsUrl } from "./maps-url";
 import { foldText } from "./text";
 import {
   GENERATION_FAILURE_MESSAGE,
   type GenerationRepository,
   MAX_GENERATION_ATTEMPTS,
+  type RestaurantMediaRetainer,
   type RestaurantProvider,
 } from "./types";
 
@@ -38,6 +42,9 @@ export class GenerationCoordinator {
     private readonly repository: GenerationRepository,
     private readonly provider: RestaurantProvider,
     private readonly now: () => Date = () => new Date(),
+    private readonly mediaRetainer: RestaurantMediaRetainer = {
+      retain: async (_generationId, data) => data,
+    },
   ) {}
 
   async submit(sourceUrl: string): Promise<SubmissionResult> {
@@ -86,7 +93,7 @@ export class GenerationCoordinator {
 
     try {
       const data = claimed.providerCheckpoint
-        ? normalizedRestaurantSchema.parse(claimed.providerCheckpoint)
+        ? providerCheckpointRestaurantSchema.parse(claimed.providerCheckpoint)
         : normalizedRestaurantSchema.parse(
             await this.provider.load(claimed.normalizedSource),
           );
@@ -101,11 +108,14 @@ export class GenerationCoordinator {
         if (!checkpointed) return { kind: "generating", id };
       }
 
+      const retainedData = normalizedRestaurantSchema.parse(
+        await this.mediaRetainer.retain(id, data),
+      );
       const published = await this.repository.publish(
         id,
         leaseToken,
         restaurantSlug(data.name, claimed.normalizedSource),
-        data,
+        retainedData,
         this.now(),
       );
       if (!published?.slug) return { kind: "generating", id };

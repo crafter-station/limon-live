@@ -7,10 +7,10 @@ import {
   ApifyGoogleMapsProvider,
   GoogleMapsPreviewProvider,
   LiveRestaurantProvider,
-  PREVIEW_TIMEOUT_MS,
-  UnusableRestaurantError,
   normalizeRestaurant,
+  PREVIEW_TIMEOUT_MS,
   parseGoogleMapsPreview,
+  UnusableRestaurantError,
 } from "./live-provider";
 
 const mapsUrl = "https://www.google.com/maps/place/Cafe+Limon";
@@ -51,6 +51,59 @@ describe("live restaurant providers", () => {
       diagnostics: { warnings: ["description-generated"] },
     });
     expect(restaurant.reviews).toHaveLength(1);
+  });
+
+  it("keeps only ranked top-level place photos and excludes reviewer imagery", () => {
+    const restaurant = normalizeRestaurant(
+      {
+        ...place,
+        imageUrls: [
+          "https://lh3.googleusercontent.com/place-one",
+          "not a url",
+          "https://lh4.googleusercontent.com/place-three",
+          "https://lh5.googleusercontent.com/ignored-fourth",
+        ],
+        reviews: [
+          {
+            name: "Ana",
+            text: "Buen café",
+            stars: 5,
+            profilePhotoUrl: "https://lh3.googleusercontent.com/avatar",
+            imageUrls: ["https://lh3.googleusercontent.com/review-photo"],
+          },
+        ],
+      },
+      "apify-google-maps",
+      mapsUrl,
+    );
+
+    expect(restaurant.photos.map((photo) => photo.url)).toEqual([
+      "https://lh3.googleusercontent.com/place-one",
+      "https://lh4.googleusercontent.com/place-three",
+    ]);
+    expect(JSON.stringify(restaurant)).not.toContain("avatar");
+    expect(JSON.stringify(restaurant)).not.toContain("review-photo");
+  });
+
+  it("preserves paid photo attribution when URL and detailed fields coexist", () => {
+    const url = "https://lh3.googleusercontent.com/place-one";
+    const restaurant = normalizeRestaurant(
+      {
+        ...place,
+        imageUrls: [url],
+        images: [{ imageUrl: url, authorName: "María P." }],
+      },
+      "apify-google-maps",
+      mapsUrl,
+    );
+
+    expect(restaurant.photos).toEqual([
+      {
+        url,
+        alt: "Foto 1 de Café Limón",
+        attribution: "María P.",
+      },
+    ]);
   });
 
   it("rejects unrelated and unlocatable results", () => {
@@ -240,7 +293,7 @@ describe("live restaurant providers", () => {
       maxImages: 3,
       scrapeContacts: false,
       scrapeDirectories: false,
-      scrapeImageAuthors: false,
+      scrapeImageAuthors: true,
       enableCompetitorAnalysis: false,
       scrapeReviewsPersonalData: false,
     });
