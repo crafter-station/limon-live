@@ -84,13 +84,25 @@ function isVisible(value: string | null, visibleText: string) {
   return value === null || visibleText.includes(value);
 }
 
-function isVisibleCurrency(
-  value: "PEN" | "S/" | "S/." | null,
+function hasVisiblePrice(
+  price: z.infer<typeof extractedPriceSchema> | null,
   visibleText: string,
 ) {
-  if (value === null) return true;
-  if (value !== "PEN") return visibleText.includes(value);
-  return /(?:^|[^\p{L}\p{N}_])PEN(?:$|[^\p{L}\p{N}_])/u.test(visibleText);
+  if (price === null) return true;
+
+  const amount = price.amount.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const amountToken = `(?<![\\p{L}\\p{N}_.,])${amount}(?![\\p{L}\\p{N}_.,])`;
+  const currencyToken =
+    price.visibleCurrency === "PEN"
+      ? "(?<![\\p{L}\\p{N}_])PEN(?![\\p{L}\\p{N}_])"
+      : price.visibleCurrency === "S/"
+        ? "(?<![\\p{L}\\p{N}_])S\\/(?!\\.)"
+        : "(?<![\\p{L}\\p{N}_])S\\/\\.(?![\\p{L}\\p{N}_])";
+
+  return new RegExp(
+    `(?:${currencyToken}\\s*${amountToken}|${amountToken}\\s*${currencyToken})`,
+    "u",
+  ).test(visibleText);
 }
 
 export function validateGroundedMenu(
@@ -114,17 +126,12 @@ export function validateGroundedMenu(
         !isVisible(item.name, item.visibleText) ||
         !isVisible(item.description, item.visibleText) ||
         !isVisible(item.price?.label ?? null, item.visibleText) ||
-        !isVisible(item.price?.amount ?? null, item.visibleText) ||
-        !isVisibleCurrency(
-          item.price?.visibleCurrency ?? null,
-          item.visibleText,
-        ) ||
+        !hasVisiblePrice(item.price, item.visibleText) ||
         item.variants.some(
           (variant) =>
             !isVisible(variant.name, item.visibleText) ||
             !isVisible(variant.price.label, item.visibleText) ||
-            !isVisible(variant.price.amount, item.visibleText) ||
-            !isVisibleCurrency(variant.price.visibleCurrency, item.visibleText),
+            !hasVisiblePrice(variant.price, item.visibleText),
         )
       ) {
         return null;

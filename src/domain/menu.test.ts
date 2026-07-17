@@ -242,6 +242,191 @@ describe("menu validation", () => {
     ).toBeNull();
   });
 
+  it("rejects an item currency marker borrowed from its variant price", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Pasta",
+                  description: null,
+                  price: {
+                    label: null,
+                    amount: "20",
+                    visibleCurrency: "PEN",
+                  },
+                  variants: [
+                    {
+                      name: "Familiar",
+                      price: {
+                        label: null,
+                        amount: "40",
+                        visibleCurrency: "PEN",
+                      },
+                    },
+                  ],
+                  visibleText: "Pasta 20 Familiar PEN 40",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects a variant currency marker borrowed from its item price", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Pasta",
+                  description: null,
+                  price: {
+                    label: null,
+                    amount: "20",
+                    visibleCurrency: "PEN",
+                  },
+                  variants: [
+                    {
+                      name: "Familiar",
+                      price: {
+                        label: null,
+                        amount: "40",
+                        visibleCurrency: "PEN",
+                      },
+                    },
+                  ],
+                  visibleText: "Pasta PEN 20 Familiar 40",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects an item amount embedded in a different visible amount", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Combo",
+                  description: null,
+                  price: {
+                    label: null,
+                    amount: "20",
+                    visibleCurrency: "S/",
+                  },
+                  variants: [],
+                  visibleText: "Combo S/ 120",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects a variant amount embedded in a different visible amount", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Combo",
+                  description: null,
+                  price: null,
+                  variants: [
+                    {
+                      name: "Familiar",
+                      price: {
+                        label: null,
+                        amount: "20",
+                        visibleCurrency: "S/",
+                      },
+                    },
+                  ],
+                  visibleText: "Combo Familiar S/ 120",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it.each(["PEN", "S/", "S/."] as const)(
+    "accepts associated %s markers in a multiple-price layout",
+    (visibleCurrency) => {
+      expect(
+        validateGroundedMenu(
+          menuExtractionSchema.parse({
+            kind: "menu",
+            sections: [
+              {
+                name: null,
+                items: [
+                  {
+                    name: "Pasta",
+                    description: null,
+                    price: {
+                      label: null,
+                      amount: "20",
+                      visibleCurrency,
+                    },
+                    variants: [
+                      {
+                        name: "Familiar",
+                        price: {
+                          label: null,
+                          amount: "40",
+                          visibleCurrency,
+                        },
+                      },
+                    ],
+                    visibleText: `Pasta ${visibleCurrency} 20 Familiar ${visibleCurrency} 40`,
+                    sourceImage: 0,
+                  },
+                ],
+              },
+            ],
+          }),
+          1,
+        ),
+      ).not.toBeNull();
+    },
+  );
+
   it.each(["PEN", "S/", "S/."] as const)(
     "accepts a visible %s item-price marker",
     (visibleCurrency) => {
