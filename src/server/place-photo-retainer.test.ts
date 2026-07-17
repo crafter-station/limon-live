@@ -70,6 +70,7 @@ describe("place photo retention", () => {
       {
         access: "public",
         addRandomSuffix: false,
+        allowOverwrite: true,
         contentType: "image/jpeg",
         token: "blob-token",
       },
@@ -79,6 +80,31 @@ describe("place photo retention", () => {
       alt: "Foto 1 de Café Limon",
     });
     expect(JSON.stringify(output)).not.toContain("googleusercontent.com");
+  });
+
+  it("overwrites the same deterministic path on retry", async () => {
+    const stored = new Set<string>();
+    const writer = vi.fn(async (path: string, _body, options) => {
+      if (stored.has(path) && !options.allowOverwrite) {
+        throw new Error("Blob already exists");
+      }
+      stored.add(path);
+      return { url: blobUrl(path) };
+    });
+    const input = restaurant(["https://lh3.googleusercontent.com/photo"]);
+    const retainer = new PlacePhotoRetainer(
+      "blob-token",
+      vi.fn(async () => imageResponse()) as typeof fetch,
+      writer,
+    );
+
+    const first = await retainer.retain("generation-id", input);
+    const retry = await retainer.retain("generation-id", input);
+
+    expect(first.photos).toEqual(retry.photos);
+    expect(writer).toHaveBeenCalledTimes(2);
+    expect(writer.mock.calls[0][0]).toBe(writer.mock.calls[1][0]);
+    expect(writer.mock.calls[1][2]).toMatchObject({ allowOverwrite: true });
   });
 
   it("rejects host, scheme, credential, port, and redirect attacks", async () => {

@@ -22,6 +22,7 @@ type BlobWriter = (
   options: {
     access: "public";
     addRandomSuffix: false;
+    allowOverwrite: true;
     contentType: string;
     token: string;
   },
@@ -112,6 +113,7 @@ export class PlacePhotoRetainer implements RestaurantMediaRetainer {
             {
               access: "public",
               addRandomSuffix: false,
+              allowOverwrite: true,
               contentType: download.contentType,
               token: this.token,
             },
