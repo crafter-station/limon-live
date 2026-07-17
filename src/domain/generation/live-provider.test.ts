@@ -85,6 +85,27 @@ describe("live restaurant providers", () => {
     expect(JSON.stringify(restaurant)).not.toContain("review-photo");
   });
 
+  it("preserves paid photo attribution when URL and detailed fields coexist", () => {
+    const url = "https://lh3.googleusercontent.com/place-one";
+    const restaurant = normalizeRestaurant(
+      {
+        ...place,
+        imageUrls: [url],
+        images: [{ imageUrl: url, authorName: "María P." }],
+      },
+      "apify-google-maps",
+      mapsUrl,
+    );
+
+    expect(restaurant.photos).toEqual([
+      {
+        url,
+        alt: "Foto 1 de Café Limón",
+        attribution: "María P.",
+      },
+    ]);
+  });
+
   it("rejects unrelated and unlocatable results", () => {
     expect(() =>
       normalizeRestaurant(
@@ -272,7 +293,7 @@ describe("live restaurant providers", () => {
       maxImages: 3,
       scrapeContacts: false,
       scrapeDirectories: false,
-      scrapeImageAuthors: false,
+      scrapeImageAuthors: true,
       enableCompetitorAnalysis: false,
       scrapeReviewsPersonalData: false,
     });

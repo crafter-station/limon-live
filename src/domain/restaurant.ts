@@ -49,6 +49,11 @@ export const normalizedRestaurantSchema = z.object({
   importedAt: z.iso.datetime(),
 });
 
+export const providerCheckpointRestaurantSchema =
+  normalizedRestaurantSchema.extend({
+    photos: z.array(photoSchema).max(3).default([]),
+  });
+
 export type NormalizedRestaurant = z.infer<typeof normalizedRestaurantSchema>;
 
 // Published records predate the live-provider fields and remain immutable.

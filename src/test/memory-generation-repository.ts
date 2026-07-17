@@ -15,6 +15,11 @@ export class MemoryGenerationRepository implements GenerationRepository {
     this.interruptPublication = true;
   }
 
+  removeCheckpointPhotos(id: string) {
+    const checkpoint = this.records.get(id)?.providerCheckpoint;
+    if (checkpoint) delete (checkpoint as Partial<NormalizedRestaurant>).photos;
+  }
+
   async createOrGet(sourceUrl: string, normalizedSource: string) {
     const existing = [...this.records.values()].find(
       (record) => record.normalizedSource === normalizedSource,

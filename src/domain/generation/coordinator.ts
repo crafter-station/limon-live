@@ -1,5 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { normalizedRestaurantSchema } from "@/domain/restaurant";
+import {
+  normalizedRestaurantSchema,
+  providerCheckpointRestaurantSchema,
+} from "@/domain/restaurant";
 import { resolveGoogleMapsUrl } from "./maps-url";
 import { foldText } from "./text";
 import {
@@ -90,7 +93,7 @@ export class GenerationCoordinator {
 
     try {
       const data = claimed.providerCheckpoint
-        ? normalizedRestaurantSchema.parse(claimed.providerCheckpoint)
+        ? providerCheckpointRestaurantSchema.parse(claimed.providerCheckpoint)
         : normalizedRestaurantSchema.parse(
             await this.provider.load(claimed.normalizedSource),
           );

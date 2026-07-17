@@ -141,11 +141,19 @@ export function normalizeRestaurant(
   const rawReviews = Array.isArray(value.reviews)
     ? value.reviews.slice(0, 3)
     : [];
+  const detailedPhotos = Array.isArray(value.images) ? value.images : [];
   const rawPhotos = Array.isArray(value.imageUrls)
-    ? value.imageUrls
-    : Array.isArray(value.images)
-      ? value.images
-      : [];
+    ? value.imageUrls.map((url) => {
+        const details = detailedPhotos.find((entry) => {
+          if (!entry || typeof entry !== "object") return false;
+          const item = entry as ProviderRecord;
+          return item.imageUrl === url || item.url === url;
+        });
+        return details && typeof details === "object"
+          ? { ...(details as ProviderRecord), imageUrl: url }
+          : url;
+      })
+    : detailedPhotos;
   return normalizedRestaurantSchema.parse({
     name,
     category,
@@ -275,7 +283,7 @@ export const APIFY_INPUT = (url: string) => ({
   maxImages: 3,
   scrapeContacts: false,
   scrapeDirectories: false,
-  scrapeImageAuthors: false,
+  scrapeImageAuthors: true,
   scrapePlaceDetailPage: true,
   enableCompetitorAnalysis: false,
   maxCompetitorsToAnalyze: 0,

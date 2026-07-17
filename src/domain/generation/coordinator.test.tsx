@@ -196,6 +196,33 @@ describe("fixture generation golden path", () => {
     expect(paidFetch).toHaveBeenCalledOnce();
   });
 
+  it("resumes a legacy paid checkpoint without photos", async () => {
+    const repository = new MemoryGenerationRepository();
+    const provider = new FixtureRestaurantProvider();
+    const load = vi.spyOn(provider, "load");
+    let now = new Date("2026-07-16T10:00:00.000Z");
+    const coordinator = new GenerationCoordinator(
+      repository,
+      provider,
+      () => now,
+    );
+    const submission = await coordinator.submit(FIXTURE_MAPS_URL);
+    if (submission.kind !== "generation")
+      throw new Error("Expected generation");
+    repository.interruptNextPublication();
+    await coordinator.advance(submission.id);
+    repository.removeCheckpointPhotos(submission.id);
+    now = new Date("2026-07-16T10:02:00.000Z");
+
+    await expect(coordinator.advance(submission.id)).resolves.toMatchObject({
+      kind: "ready",
+    });
+    expect(load).toHaveBeenCalledOnce();
+    expect(
+      (await repository.findById(submission.id))?.publishedData?.photos,
+    ).toEqual([]);
+  });
+
   it("reuses the paid checkpoint after media failure and publishes no hotlinks", async () => {
     const repository = new MemoryGenerationRepository();
     const provider = new FixtureRestaurantProvider();
