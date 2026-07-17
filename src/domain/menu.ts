@@ -124,10 +124,7 @@ export function validateGroundedMenu(
             !isVisible(variant.name, item.visibleText) ||
             !isVisible(variant.price.label, item.visibleText) ||
             !isVisible(variant.price.amount, item.visibleText) ||
-            !isVisibleCurrency(
-              variant.price.visibleCurrency,
-              item.visibleText,
-            ),
+            !isVisibleCurrency(variant.price.visibleCurrency, item.visibleText),
         )
       ) {
         return null;
