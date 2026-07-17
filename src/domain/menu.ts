@@ -84,6 +84,15 @@ function isVisible(value: string | null, visibleText: string) {
   return value === null || visibleText.includes(value);
 }
 
+function isVisibleCurrency(
+  value: "PEN" | "S/" | "S/." | null,
+  visibleText: string,
+) {
+  if (value === null) return true;
+  if (value !== "PEN") return visibleText.includes(value);
+  return /(?:^|[^\p{L}\p{N}_])PEN(?:$|[^\p{L}\p{N}_])/u.test(visibleText);
+}
+
 export function validateGroundedMenu(
   candidate: MenuExtraction,
   candidateCount: number,
@@ -106,13 +115,19 @@ export function validateGroundedMenu(
         !isVisible(item.description, item.visibleText) ||
         !isVisible(item.price?.label ?? null, item.visibleText) ||
         !isVisible(item.price?.amount ?? null, item.visibleText) ||
-        !isVisible(item.price?.visibleCurrency ?? null, item.visibleText) ||
+        !isVisibleCurrency(
+          item.price?.visibleCurrency ?? null,
+          item.visibleText,
+        ) ||
         item.variants.some(
           (variant) =>
             !isVisible(variant.name, item.visibleText) ||
             !isVisible(variant.price.label, item.visibleText) ||
             !isVisible(variant.price.amount, item.visibleText) ||
-            !isVisible(variant.price.visibleCurrency, item.visibleText),
+            !isVisibleCurrency(
+              variant.price.visibleCurrency,
+              item.visibleText,
+            ),
         )
       ) {
         return null;

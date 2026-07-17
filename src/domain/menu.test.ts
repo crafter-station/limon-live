@@ -177,6 +177,104 @@ describe("menu validation", () => {
     ).toBeNull();
   });
 
+  it("rejects PEN inside an item name as item-price currency evidence", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "PENNE",
+                  description: null,
+                  price: {
+                    label: null,
+                    amount: "20",
+                    visibleCurrency: "PEN",
+                  },
+                  variants: [],
+                  visibleText: "PENNE 20",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects PEN inside a variant name as variant-price currency evidence", () => {
+    expect(
+      validateGroundedMenu(
+        menuExtractionSchema.parse({
+          kind: "menu",
+          sections: [
+            {
+              name: null,
+              items: [
+                {
+                  name: "Pasta",
+                  description: null,
+                  price: null,
+                  variants: [
+                    {
+                      name: "PENNE",
+                      price: {
+                        label: null,
+                        amount: "20",
+                        visibleCurrency: "PEN",
+                      },
+                    },
+                  ],
+                  visibleText: "Pasta PENNE 20",
+                  sourceImage: 0,
+                },
+              ],
+            },
+          ],
+        }),
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it.each(["PEN", "S/", "S/."] as const)(
+    "accepts a visible %s item-price marker",
+    (visibleCurrency) => {
+      expect(
+        validateGroundedMenu(
+          menuExtractionSchema.parse({
+            kind: "menu",
+            sections: [
+              {
+                name: null,
+                items: [
+                  {
+                    name: "Pasta",
+                    description: null,
+                    price: {
+                      label: null,
+                      amount: "20",
+                      visibleCurrency,
+                    },
+                    variants: [],
+                    visibleText: `Pasta ${visibleCurrency} 20`,
+                    sourceImage: 0,
+                  },
+                ],
+              },
+            ],
+          }),
+          1,
+        ),
+      ).not.toBeNull();
+    },
+  );
+
   it.each([
     "empty",
     "unreadable",
