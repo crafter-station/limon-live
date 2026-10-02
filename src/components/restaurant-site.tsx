@@ -17,11 +17,12 @@ export function RestaurantSite({
   slug?: string;
   menu?: Menu | null;
 }) {
+  const photos = restaurant.photos ?? [];
   const importedDate = new Intl.DateTimeFormat("es-PE", {
     dateStyle: "long",
     timeZone: "America/Lima",
   }).format(new Date(restaurant.importedAt));
-  const heroPhoto = restaurant.photos[0];
+  const heroPhoto = photos[0];
   const reviews = selectedReviews(restaurant.reviews);
   const website = safeWebsite(restaurant.website);
   const status = openingStatus(restaurant.hours);
@@ -97,12 +98,12 @@ export function RestaurantSite({
           ) : null}
         </div>
       </section>
-      {restaurant.photos.length > 1 ? (
+      {photos.length > 1 ? (
         <section className="restaurant-gallery" aria-labelledby="gallery-title">
           <p className="eyebrow">Galería</p>
           <h2 id="gallery-title">Una mirada al lugar</h2>
           <div className="gallery-grid">
-            {restaurant.photos.slice(1).map((photo) => (
+            {photos.slice(1).map((photo) => (
               <figure key={photo.url}>
                 <Image
                   src={photo.url}

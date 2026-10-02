@@ -193,6 +193,15 @@ function parseSupportedUrl(input: string): { kind: UrlKind; url: URL } {
   return { kind: "full", url };
 }
 
+export function isGoogleMapsUrl(input: string): boolean {
+  try {
+    parseSupportedUrl(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function normalizeFullUrl(url: URL): string {
   const parameterIdentity = getParameterIdentity(url);
   const pathIdentities = getPathIdentities(url);

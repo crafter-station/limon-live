@@ -1,4 +1,36 @@
+import process from "process";
 import { z } from "zod";
+
+export const REQUIRED_SERVER_ENV_VARIABLES = [
+  "APIFY_PERSONAL_API_TOKEN",
+  "DATABASE_URL",
+  "BLOB_READ_WRITE_TOKEN",
+  "AI_GATEWAY_API_KEY",
+] as const;
+
+export function assertRequiredServerEnv(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+) {
+  const missing = REQUIRED_SERVER_ENV_VARIABLES.filter(
+    (name) => !env[name]?.trim(),
+  );
+
+  if (missing.length) {
+    console.error(
+      `Missing required environment variables: ${missing.join(", ")}`,
+    );
+    process.exit(1);
+  }
+
+  try {
+    parseServerEnv(env);
+  } catch {
+    console.error(
+      "Invalid server environment configuration. Check DATABASE_URL; it must be a valid PostgreSQL URL.",
+    );
+    process.exit(1);
+  }
+}
 
 const serverEnvSchema = z.object({
   APIFY_PERSONAL_API_TOKEN: z.string().min(1),
